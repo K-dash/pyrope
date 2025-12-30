@@ -14,8 +14,8 @@ description = "Run format, lint, and test for both Rust and Python (default)"
 run_task = "all"
 
 [tasks.all]
-description = "Run format, lint, and test for both Rust and Python"
-dependencies = ["fmt-all", "lint-all", "test-all"]
+description = "Build and run format, lint, and test for both Rust and Python"
+dependencies = ["dev", "fmt-all", "lint-all", "test-all"]
 
 [tasks.fmt-all]
 description = "Format both Rust and Python code"
@@ -65,14 +65,12 @@ rm -rf target/wheels
 # =============================================================================
 
 [tasks.rust-build]
-description = "Build Rust library (release)"
-command = "cargo"
-args = ["build", "--release"]
+description = "Build Python extension (release) - Use 'dev' for development builds"
+alias = "build-release"
 
 [tasks.rust-build-dev]
-description = "Build Rust library (debug)"
-command = "cargo"
-args = ["build"]
+description = "Build Python extension (development) - Use 'dev' instead"
+alias = "dev"
 
 [tasks.rust-test]
 description = "Run Rust tests"
