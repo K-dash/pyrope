@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 
 from .pyrope_native import (
     Operator,
@@ -18,15 +18,26 @@ class Op:
         return _op_assert_str()
 
     @staticmethod
-    def split(delim: str) -> Operator[str, Sequence[str]]:
+    def expect_str() -> Operator[object, str]:
+        """Type-narrowing operator that asserts the input is a string.
+
+        Alias for assert_str() for use after operations that return object.
+
+        Usage:
+            Blueprint().pipe(Op.index(0)).pipe(Op.expect_str()).pipe(Op.to_uppercase())
+        """
+        return _op_assert_str()
+
+    @staticmethod
+    def split(delim: str) -> Operator[str, list[str]]:
         return _op_split(delim)
 
     @staticmethod
-    def index(idx: int) -> Operator[list[object], object]:
+    def index(idx: int) -> Operator[Sequence[object], object]:
         return _op_index(idx)
 
     @staticmethod
-    def get(key: str) -> Operator[dict[str, object], object]:
+    def get(key: str) -> Operator[Mapping[str, object], object]:
         return _op_get_key(key)
 
     @staticmethod
