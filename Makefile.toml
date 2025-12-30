@@ -5,6 +5,27 @@ default_to_workspace = false
 CARGO_TERM_COLOR = "always"
 
 # =============================================================================
+# Default Task
+# =============================================================================
+
+[tasks.default]
+clear = true
+description = "Run format, lint, and test for both Rust and Python (default)"
+run_task = "all"
+
+[tasks.all]
+description = "Run format, lint, and test for both Rust and Python"
+dependencies = ["fmt-all", "lint-all", "test-all"]
+
+[tasks.fmt-all]
+description = "Format both Rust and Python code"
+dependencies = ["rust-fmt", "ruff-fmt"]
+
+[tasks.lint-all]
+description = "Lint both Rust and Python code"
+dependencies = ["rust-clippy", "ruff"]
+
+# =============================================================================
 # Maturin / Build Tasks
 # =============================================================================
 
@@ -90,16 +111,31 @@ args = ["run", "pytest", "-v"]
 [tasks.pyright]
 description = "Run pyright type checks via uv"
 command = "uv"
-args = ["run", "pyright", "tests/"]
+args = ["run", "pyright", "."]
 
 [tasks.mypy]
 description = "Run mypy strict type checks via uv"
 command = "uv"
-args = ["run", "mypy", "--strict", "tests/"]
+args = ["run", "mypy", "--strict", "."]
+
+[tasks.ruff]
+description = "Run ruff linter via uv"
+command = "uv"
+args = ["run", "ruff", "check", "."]
+
+[tasks.ruff-fmt]
+description = "Format Python code with ruff"
+command = "uv"
+args = ["run", "ruff", "format", "."]
+
+[tasks.ruff-fmt-check]
+description = "Check Python code formatting with ruff"
+command = "uv"
+args = ["run", "ruff", "format", "--check", "."]
 
 [tasks.test-all]
-description = "Run all tests (mypy, pyright, pytest)"
-dependencies = ["mypy", "pyright", "pytest"]
+description = "Run all tests (Rust + Python: ruff, mypy, pyright, pytest)"
+dependencies = ["rust-test", "ruff", "mypy", "pyright", "pytest"]
 
 # =============================================================================
 # Combined Tasks
@@ -107,7 +143,7 @@ dependencies = ["mypy", "pyright", "pytest"]
 
 [tasks.check]
 description = "Run all checks (format check, clippy, type checks, tests)"
-dependencies = ["rust-fmt-check", "rust-clippy", "test-all"]
+dependencies = ["rust-fmt-check", "ruff-fmt-check", "rust-clippy", "test-all"]
 
 [tasks.ci]
 description = "Run CI pipeline (build + check)"
