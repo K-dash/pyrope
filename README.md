@@ -122,18 +122,22 @@ else:
     print(f"Error: {result.unwrap_err().message}")
 ```
 
-### Operators
+### Operators & Integration
 
-Supported operators are listed in [docs](docs/operations.md).
+Pyropust provides built-in operators to handle common data tasks safely in Rust, while allowing flexible escape hatches to Python.
 
-`Op.json_decode()` enables a fast Rust JSON path when it is the first operator in a Blueprint. `Op.map_py(...)` runs a Python callback inside the pipeline (slower, but flexible). If the callback raises, the error becomes `RopustError` with code `py_exception`, and the traceback is stored in `err.metadata["py_traceback"]`.
+#### Core Operators
+- **`Op.json_decode()`**: Enables a **Turbo JSON Path** (high-performance Rust parsing) when used as the first operator in a Blueprint.
+- **`Op.map_py(fn)`**: Runs a custom Python callback within the pipeline. It’s a "safety hatch"—if the callback raises an exception, it is caught and converted into a `RopustError` (code: `py_exception`) with the original traceback stored in `metadata["py_traceback"]`.
+- **Built-in logic**: Includes `as_str()`, `as_int()`, `split()`, `index()`, `get()`, and `to_uppercase()`. See [docs/operations.md](docs/operations.md) for the full list.
 
-Note: `Blueprint.for_type(...)` is a type-hinting helper for Python type checkers. It does not enforce runtime type checks.
+#### Design Principles
+- **Type-safe construction**: `Blueprint.for_type(T)` is a helper for static type checkers (Pyright/Mypy). It provides zero-runtime-overhead type hinting.
+- **Exception Bridge**: Use `exception_to_ropust_error()` to normalize external exceptions (like `requests.Error`) into a consistent `RopustError` format.
 
-When integrating exception-based code, use `exception_to_ropust_error()` to normalize Python exceptions into the shared `RopustError` format.
-
-Why a shared error format? It keeps errors consistent across Python/Rust boundaries and lets you reliably capture metadata (like `py_traceback`) without losing context. The full format and field meanings are documented in [docs/errors.md](docs/errors.md).
-
+> [!NOTE]
+> **Why a shared error format?**
+> By unifying errors into `RopustError`, you get a consistent interface across Python and Rust. You can reliably access fields like `path`, `expected`, and `got` without losing context (like Python tracebacks) during pipeline orchestration. See [docs/errors.md](docs/errors.md) for details.
 ## Syntactic Sugar: `@do` Decorator
 
 Generator-based short-circuiting reproduces Rust's `?` operator in Python.
