@@ -151,7 +151,7 @@ def generate_rust_op(specs: list[OpSpec]) -> str:
         "impl Op {",
     ]
 
-    for spec in specs:
+    for i, spec in enumerate(specs):
         # Method signature
         param_list = ", ".join(f"{p.name}: {p.rust_type}" for p in spec.params)
 
@@ -171,7 +171,9 @@ def generate_rust_op(specs: list[OpSpec]) -> str:
             lines.append(f"        }}")
 
         lines.append("    }")
-        lines.append("")
+        # Only add blank line between methods, not after the last one
+        if i < len(specs) - 1:
+            lines.append("")
 
     lines.append("}")
 
@@ -180,18 +182,21 @@ def generate_rust_op(specs: list[OpSpec]) -> str:
 
 def generate_python_stub(specs: list[OpSpec]) -> str:
     """Generate the Op class stub content for __init__.pyi."""
-    lines = ["    # BEGIN GENERATED OP"]
+    # Generate content without any indentation
+    # The replacement will preserve the original indentation
+    lines = []
+    lines.append("# BEGIN GENERATED OP")
 
     for spec in specs:
         # Method signature
         param_list = ", ".join(f"{p.name}: {p.py_type}" for p in spec.params)
 
-        lines.append("    @staticmethod")
+        lines.append("@staticmethod")
         lines.append(
-            f"    def {spec.py_name}({param_list}) -> Operator[{spec.in_type}, {spec.out_type}]: ..."
+            f"def {spec.py_name}({param_list}) -> Operator[{spec.in_type}, {spec.out_type}]: ..."
         )
 
-    lines.append("    # END GENERATED OP")
+    lines.append("# END GENERATED OP")
 
     return "\n".join(lines)
 
@@ -200,16 +205,35 @@ def update_python_stub(pyi_path: Path, new_content: str):
     """Update pyrope/__init__.pyi with new Op stub content."""
     content = pyi_path.read_text()
 
-    # Find and replace between markers
+    # Find and replace between markers, preserving indentation
     begin = "# BEGIN GENERATED OP"
     end = "# END GENERATED OP"
 
-    pattern = re.compile(rf"({re.escape(begin)}).*?({re.escape(end)})", re.DOTALL)
+    # Match with any leading whitespace before the begin marker
+    pattern = re.compile(
+        rf"^(\s*)({re.escape(begin)}).*?({re.escape(end)})",
+        re.MULTILINE | re.DOTALL
+    )
 
-    if not pattern.search(content):
+    match = pattern.search(content)
+    if not match:
         raise ValueError(f"Markers not found in {pyi_path}")
 
-    updated = pattern.sub(new_content, content)
+    # Get the indentation from the matched begin marker
+    indent = match.group(1)
+    
+    # Apply the same indentation to all lines in new_content
+    indented_lines = []
+    for line in new_content.split("\n"):
+        if line.strip():  # Non-empty line
+            indented_lines.append(indent + line)
+        else:
+            indented_lines.append("")
+    
+    indented_content = "\n".join(indented_lines)
+    
+    # Replace the match
+    updated = pattern.sub(indented_content, content)
     pyi_path.write_text(updated)
 
 
@@ -226,6 +250,9 @@ def main():
 
     print(f"🦀 Generating {op_generated_rs}...")
     rust_code = generate_rust_op(specs)
+    # Ensure trailing newline
+    if not rust_code.endswith("\n"):
+        rust_code += "\n"
     op_generated_rs.write_text(rust_code)
 
     print(f"🐍 Updating {pyi}...")

@@ -127,9 +127,10 @@ def test_generate_python_stub_and_update_replaces_marked_region(tmp_path: Path) 
     ]
 
     new_stub = cast("str", gen_ops.generate_python_stub(specs))
-    assert new_stub.startswith("    # BEGIN GENERATED OP")
+    # Generated stub now has no indentation (indentation is added during replacement)
+    assert new_stub.startswith("# BEGIN GENERATED OP")
     assert "def len() -> Operator[str, int]:" in new_stub
-    assert new_stub.rstrip().endswith("    # END GENERATED OP")
+    assert new_stub.rstrip().endswith("# END GENERATED OP")
 
     pyi = tmp_path / "__init__.pyi"
     pyi.write_text(
