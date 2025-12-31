@@ -1,6 +1,4 @@
-# pyrope (Python + Rope)
-
-[![CI](https://github.com/USERNAME/rope/workflows/CI/badge.svg)](https://github.com/USERNAME/rope/actions)
+# pyrope
 
 A proof-of-concept library that brings Rust's `Result` and `Option` types to Python, treating failures as values instead of exceptions.
 
