@@ -158,6 +158,8 @@ Blueprints are the primary abstraction of pyropust.
 
 Blueprints are inert definitions. Use `run(bp, value)` to execute them, typically inside an exception boundary.
 
+Only a core set of basic operators is supported today; see the full list in [docs/operations.md](docs/operations.md).
+
 ### 3) Rust operators (hot paths)
 
 Some operations are performance-critical and error-prone. pyropust implements these as Rust-backed operators:
@@ -323,5 +325,3 @@ It is a boundary and pipeline tool, not a new language.
 ## License
 
 MIT
-
-Copyright (c) 2025 K-dash
