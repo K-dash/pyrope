@@ -14,6 +14,7 @@ try:
         Result,
         RopeError,
         Some,
+        exception_to_rope_error,
         run,
     )
 except ModuleNotFoundError as exc:
@@ -35,5 +36,6 @@ __all__ = [
     "Some",
     "catch",
     "do",
+    "exception_to_rope_error",
     "run",
 ]

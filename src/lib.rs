@@ -3,8 +3,8 @@ mod ops;
 mod py;
 
 use py::{
-    py_err, py_none, py_ok, py_some, run, Blueprint, ErrorKindObj, Op, OpCoerce, OpCore, OpMap,
-    OpSeq, OpText, Operator, OptionObj, ResultObj, RopeError,
+    exception_to_rope_error, py_err, py_none, py_ok, py_some, run, Blueprint, ErrorKindObj, Op,
+    OpCoerce, OpCore, OpMap, OpSeq, OpText, Operator, OptionObj, ResultObj, RopeError,
 };
 use pyo3::prelude::*;
 use pyo3::types::PyModule;
@@ -31,6 +31,7 @@ fn pyropust_native(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(py_some, m)?)?;
     m.add_function(wrap_pyfunction!(py_none, m)?)?;
     m.add_function(wrap_pyfunction!(run, m)?)?;
+    m.add_function(wrap_pyfunction!(exception_to_rope_error, m)?)?;
 
     m.add(
         "__all__",

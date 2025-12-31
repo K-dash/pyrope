@@ -119,6 +119,8 @@ Supported operators are listed in [docs](docs/operations.md).
 
 Note: `Blueprint.for_type(...)` is a type-hinting helper for Python type checkers. It does not enforce runtime type checks.
 
+When integrating exception-based code, use `exception_to_rope_error()` to normalize Python exceptions into the shared `RopeError` format.
+
 ## Quick Start
 
 Start small and adopt features gradually:

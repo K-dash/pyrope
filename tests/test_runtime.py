@@ -4,7 +4,7 @@ from collections.abc import Generator
 
 import pytest
 
-from pyropust import Err, None_, Ok, Result, RopeError, Some, catch, do
+from pyropust import Err, None_, Ok, Result, RopeError, Some, catch, do, exception_to_rope_error
 
 
 def test_result_ok_err() -> None:
@@ -78,3 +78,16 @@ def test_unwrap_or_raise() -> None:
     err = Err("nope")
     with pytest.raises(RuntimeError, match="boom"):
         err.unwrap_or_raise(RuntimeError("boom"))
+
+
+def test_exception_to_rope_error() -> None:
+    def raise_value_error() -> None:
+        raise ValueError("boom")
+
+    try:
+        raise_value_error()
+    except ValueError as exc:
+        err = exception_to_rope_error(exc)
+        assert isinstance(err, RopeError)
+        assert err.code == "py_exception"
+        assert "py_traceback" in err.metadata

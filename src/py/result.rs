@@ -2,9 +2,8 @@ use pyo3::exceptions::{PyBaseException, PyRuntimeError, PyTypeError};
 use pyo3::prelude::*;
 use pyo3::types::{PyAny, PyTuple, PyType};
 use pyo3::Bound;
-use std::collections::HashMap;
 
-use super::error::{ErrorKind, RopeError};
+use super::error::build_rope_error_from_pyerr;
 
 #[pyclass(name = "Result")]
 pub struct ResultObj {
@@ -168,29 +167,6 @@ fn should_catch(py: Python<'_>, err: &PyErr, exceptions: &Bound<'_, PyTuple>) ->
 }
 
 fn rope_error_from_exception(py: Python<'_>, py_err: PyErr) -> ResultObj {
-    let mut metadata = HashMap::new();
-    if let Ok(name) = py_err.get_type(py).name() {
-        metadata.insert("exception".to_string(), name.to_string());
-    }
-    let cause = py_err
-        .value(py)
-        .repr()
-        .ok()
-        .and_then(|s| s.to_str().ok().map(|v| v.to_string()));
-    let err_obj = Py::new(
-        py,
-        RopeError {
-            kind: ErrorKind::Internal,
-            code: "exception".to_string(),
-            message: py_err.to_string(),
-            metadata,
-            op: None,
-            path: Vec::new(),
-            expected: None,
-            got: None,
-            cause,
-        },
-    )
-    .expect("rope error alloc");
+    let err_obj = build_rope_error_from_pyerr(py, py_err, "py_exception");
     err(err_obj.into())
 }
