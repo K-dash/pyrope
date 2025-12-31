@@ -65,6 +65,7 @@ res = (
 print(res.unwrap())  # "Value is 246"
 ```
 
+> [!TIP]
 > **Type Hint for `and_then`**: When using `and_then` with a callback that may return `Err`, define the initial `Result` with an explicit return type annotation. This ensures the error type is correctly inferred.
 >
 > ```python
