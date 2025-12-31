@@ -58,6 +58,14 @@ pub fn apply(op: &OperatorKind, value: Value) -> Result<Value, OpError> {
             let text = expect_str("ToUppercase", value)?;
             Ok(Value::Str(text.to_uppercase()))
         }
+        OperatorKind::ExpectStr => {
+            let text = expect_str("ExpectStr", value)?;
+            Ok(Value::Str(text))
+        }
+        OperatorKind::Len => {
+            let text = expect_str("Len", value)?;
+            Ok(Value::Int(text.len() as i64))
+        }
     }
 }
 
