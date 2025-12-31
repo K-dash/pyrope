@@ -4,7 +4,83 @@ A proof-of-concept library that brings Rust's `Result` and `Option` types to Pyt
 
 The concept: "Drop a rope (type safety from Rust) into the dangerous freedom of Python."
 
-## Quick Example
+## Why Not Exceptions?
+
+1. **Explicit control flow**: Treat failures as values, not control flow jumps
+2. **No implicit None**: Force explicit `unwrap()` or `is_some()` checks
+3. **Rust-like short-circuiting**: Reproduce Rust's `?` operator in Python using generators
+
+## Direct Usage
+
+You can use `Result` and `Option` types directly for manual handling or functional chaining, just like in Rust.
+
+### Manual Handling
+
+```python
+from pyrope import Ok, Err, Result
+
+def divide(a: int, b: int) -> Result[float, str]:
+    if b == 0:
+        return Err("Division by zero")
+    return Ok(a / b)
+
+res = divide(10, 2)
+if res.is_ok():
+    print(f"Success: {res.unwrap()}")  # Success: 5.0
+else:
+    print(f"Failure: {res.unwrap_err()}")
+```
+
+### Functional Chaining (`map`, `and_then`)
+
+Avoid `if` checks by chaining operations.
+
+```python
+from pyrope import Ok
+
+res = (
+    Ok("123")
+    .map(int)                # Result[int, E]
+    .map(lambda x: x * 2)    # Result[int, E]
+    .and_then(lambda x: Ok(f"Value is {x}"))
+)
+print(res.unwrap())  # "Value is 246"
+```
+
+> **Type Hint for `and_then`**: When using `and_then` with a callback that may return `Err`, define the initial `Result` with an explicit return type annotation. This ensures the error type is correctly inferred.
+>
+> ```python
+> from pyrope import Ok, Err, Result
+>
+> def fetch_data() -> Result[int, str]:  # Declare error type here
+>     return Ok(42)
+>
+> def validate(x: int) -> Result[int, str]:
+>     return Err("invalid") if x < 0 else Ok(x)
+>
+> # Error type flows correctly through the chain
+> result = fetch_data().and_then(validate)
+> ```
+
+### Option Type (Safe None Handling)
+
+No more `AttributeError: 'NoneType' object has no attribute '...'`.
+
+```python
+from pyrope import Some, None_, Option
+
+def find_user(user_id: int) -> Option[str]:
+    return Some("Alice") if user_id == 1 else None_()
+
+name_opt = find_user(1)
+# You MUST check or unwrap explicitly
+name = name_opt.unwrap_or("Guest")
+print(f"Hello, {name}!")  # Hello, Alice!
+```
+
+## Blueprint (Batch Execution)
+
+For performance-critical pipelines, use `Blueprint` to define a sequence of operations and execute them in a single Rust call.
 
 ```python
 from pyrope import Blueprint, Op, run
@@ -26,7 +102,9 @@ else:
     print(f"Error: {result.unwrap_err().message}")
 ```
 
-### Generator-based short-circuiting (Rust `?` operator style)
+## Syntactic Sugar: `@do` Decorator
+
+Generator-based short-circuiting reproduces Rust's `?` operator in Python.
 
 ```python
 from pyrope import Ok, Result, do
@@ -39,12 +117,6 @@ def process(value: str) -> Result[str, object]:
 
 print(process("hello").unwrap())  # "Processed: HELLO"
 ```
-
-## Why Not Exceptions?
-
-1. **Explicit control flow**: Treat failures as values, not control flow jumps
-2. **No implicit None**: Force explicit `unwrap()` or `is_some()` checks
-3. **Rust-like short-circuiting**: Reproduce Rust's `?` operator in Python using generators
 
 ## Type Checker Support
 
