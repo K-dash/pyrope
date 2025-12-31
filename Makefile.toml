@@ -5,6 +5,26 @@ default_to_workspace = false
 CARGO_TERM_COLOR = "always"
 
 # =============================================================================
+# Code Generation
+# =============================================================================
+
+[tasks.gen]
+description = "Generate Op class from kind.rs metadata"
+command = "python3"
+args = ["tools/gen_ops.py"]
+
+[tasks.check-gen]
+description = "Check if generated code is up-to-date"
+script = """
+python3 tools/gen_ops.py
+if ! git diff --exit-code src/py/op_generated.rs pyrope/__init__.pyi; then
+    echo "❌ Generated code is out of date. Run 'makers gen' to update."
+    exit 1
+fi
+echo "✅ Generated code is up-to-date"
+"""
+
+# =============================================================================
 # Default Task
 # =============================================================================
 
@@ -15,7 +35,7 @@ run_task = "all"
 
 [tasks.all]
 description = "Build and run format, lint, and test for both Rust and Python"
-dependencies = ["dev", "fmt-all", "lint-all", "test-all"]
+dependencies = ["gen", "dev", "fmt-all", "lint-all", "test-all"]
 
 [tasks.fmt-all]
 description = "Format both Rust and Python code"
@@ -140,8 +160,14 @@ dependencies = ["rust-test", "ruff", "mypy", "pyright", "pytest"]
 # =============================================================================
 
 [tasks.check]
-description = "Run all checks (format check, clippy, type checks, tests)"
-dependencies = ["rust-fmt-check", "ruff-fmt-check", "rust-clippy", "test-all"]
+description = "Run all checks (format check, clippy, type checks, tests, generated code)"
+dependencies = [
+    "check-gen",
+    "rust-fmt-check",
+    "ruff-fmt-check",
+    "rust-clippy",
+    "test-all",
+]
 
 [tasks.ci]
 description = "Run CI pipeline (build + check)"
