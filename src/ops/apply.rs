@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::data::Value;
 
-use super::error::{OpError, OpErrorKind, PathItem};
+use super::error::{ErrorKind, OpError, PathItem};
 use super::kind::OperatorKind;
 
 pub fn apply(op: &OperatorKind, value: Value) -> Result<Value, OpError> {
@@ -15,7 +15,7 @@ pub fn apply(op: &OperatorKind, value: Value) -> Result<Value, OpError> {
         OperatorKind::Split { delim } => {
             if delim.is_empty() {
                 return Err(OpError {
-                    kind: OpErrorKind::InvalidInput,
+                    kind: ErrorKind::InvalidInput,
                     code: "invalid_delim",
                     message: "Split delimiter must not be empty",
                     op: op_name,
@@ -34,7 +34,7 @@ pub fn apply(op: &OperatorKind, value: Value) -> Result<Value, OpError> {
         OperatorKind::Index { idx } => {
             let items = expect_list(op_name, value)?;
             items.get(*idx).cloned().ok_or_else(|| OpError {
-                kind: OpErrorKind::NotFound,
+                kind: ErrorKind::NotFound,
                 code: "index_out_of_range",
                 message: "Index out of range",
                 op: op_name,
@@ -46,7 +46,7 @@ pub fn apply(op: &OperatorKind, value: Value) -> Result<Value, OpError> {
         OperatorKind::GetKey { key } => {
             let map = expect_map(op_name, value)?;
             map.get(key).cloned().ok_or_else(|| OpError {
-                kind: OpErrorKind::NotFound,
+                kind: ErrorKind::NotFound,
                 code: "key_not_found",
                 message: "Key not found",
                 op: op_name,

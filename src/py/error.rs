@@ -2,25 +2,8 @@ use pyo3::prelude::*;
 use pyo3::types::{PyAny, PyDict, PyList, PyString};
 use std::collections::HashMap;
 
-// Re-export PathItem from ops to avoid duplication
-pub use crate::ops::PathItem;
-
-#[derive(Clone, Copy, Debug)]
-pub enum ErrorKind {
-    InvalidInput,
-    NotFound,
-    Internal,
-}
-
-impl ErrorKind {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            ErrorKind::InvalidInput => "InvalidInput",
-            ErrorKind::NotFound => "NotFound",
-            ErrorKind::Internal => "Internal",
-        }
-    }
-}
+// Re-export from ops to avoid duplication
+pub use crate::ops::{ErrorKind, PathItem};
 
 #[pyclass(frozen, name = "ErrorKind")]
 #[derive(Clone)]

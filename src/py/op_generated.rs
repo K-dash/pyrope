@@ -73,6 +73,13 @@ impl OpText {
             kind: OperatorKind::ToUppercase,
         }
     }
+
+    #[staticmethod]
+    pub fn len() -> Operator {
+        Operator {
+            kind: OperatorKind::Len,
+        }
+    }
 }
 
 /// Static factory class for creating Operators
@@ -99,13 +106,6 @@ impl Op {
     #[classattr]
     fn text() -> OpText {
         OpText
-    }
-
-    #[staticmethod]
-    pub fn len() -> Operator {
-        Operator {
-            kind: OperatorKind::Len,
-        }
     }
 
     /// Alias for backward compatibility
@@ -142,5 +142,11 @@ impl Op {
     #[staticmethod]
     pub fn to_uppercase() -> Operator {
         OpText::to_uppercase()
+    }
+
+    /// Alias for backward compatibility
+    #[staticmethod]
+    pub fn len() -> Operator {
+        OpText::len()
     }
 }

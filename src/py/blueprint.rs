@@ -3,7 +3,7 @@ use super::operator::Operator;
 use super::result::{err, ok, ResultObj};
 use crate::data::{py_to_value, value_to_py};
 use crate::ops::PathItem;
-use crate::ops::{apply, OpError, OpErrorKind, OperatorKind};
+use crate::ops::{apply, OpError, OperatorKind};
 use pyo3::prelude::*;
 use pyo3::types::{PyAny, PyType};
 use std::collections::HashMap;
@@ -37,6 +37,11 @@ impl Blueprint {
         Blueprint { ops }
     }
 
+    /// Convenience method equivalent to `.pipe(Op.coerce.assert_str())`.
+    /// Narrows the output type to `str` by asserting the value is a string.
+    ///
+    /// Note: If more guard methods are needed (e.g., guard_int, guard_list),
+    /// consider generating them via gen_ops.py based on @ns coerce operators.
     fn guard_str(&self) -> Self {
         let mut ops = self.ops.clone();
         ops.push(OperatorKind::AssertStr);
@@ -77,18 +82,14 @@ pub fn run(py: Python<'_>, blueprint: PyRef<'_, Blueprint>, input: Py<PyAny>) ->
 }
 
 fn op_error_to_result(py: Python<'_>, e: OpError) -> ResultObj {
-    let kind = match e.kind {
-        OpErrorKind::InvalidInput => ErrorKind::InvalidInput,
-        OpErrorKind::NotFound => ErrorKind::NotFound,
-    };
     rope_error(
         py,
-        kind,
+        e.kind, // No conversion needed - same ErrorKind type
         e.code,
         e.message,
         None,
         Some(e.op.to_string()),
-        e.path, // No conversion needed - same type now
+        e.path,
         e.expected.map(|s| s.to_string()),
         e.got,
         None,

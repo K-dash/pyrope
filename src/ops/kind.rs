@@ -35,6 +35,7 @@ pub enum OperatorKind {
 
     /// @op name=len py=len
     /// @sig in=str out=int
+    /// @ns text
     Len,
 }
 
