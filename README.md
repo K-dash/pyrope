@@ -102,6 +102,47 @@ else:
     print(f"Error: {result.unwrap_err().message}")
 ```
 
+### Turbo JSON Path (`Op.json_decode`)
+
+If the first operator is `Op.json_decode()`, `run()` parses JSON directly in Rust (`serde_json`) without creating a Python `dict` first. This reduces overhead for large payloads.
+
+```python
+from pyrope import Blueprint, Op, run
+
+bp = (
+    Blueprint.for_type(str)
+    .pipe(Op.json_decode())
+    .pipe(Op.get("name"))
+    .pipe(Op.expect_str())
+    .pipe(Op.to_uppercase())
+)
+
+res = run(bp, '{"name": "alice"}')
+print(res.unwrap())  # "ALICE"
+```
+
+### Escape Hatch: `Op.map_py(...)`
+
+`Op.map_py` lets you run a Python function inside a Blueprint. It trades performance for flexibility: each call crosses the Python↔Rust boundary.
+
+```python
+from pyrope import Blueprint, Op, run
+
+def reverse_text(value: str) -> str:
+    return "".join(reversed(value))
+
+bp = (
+    Blueprint.for_type(str)
+    .pipe(Op.map_py(reverse_text))
+    .pipe(Op.to_uppercase())
+)
+
+res = run(bp, "hello")
+print(res.unwrap())  # "OLLEH"
+```
+
+If the Python function raises, the error becomes a `RopeError` with code `py_exception`. The traceback is available in `err.metadata["py_traceback"]`.
+
 ### Benchmark (reproducible, no extra deps)
 
 Run the included `timeit` benchmark to compare a pure-Python pipeline vs `Blueprint` in seconds. The benchmark builds the Blueprint in setup and measures `run()` only, reporting median timings:
