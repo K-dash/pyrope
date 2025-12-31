@@ -17,8 +17,10 @@ args = ["tools/gen_ops.py"]
 description = "Check if generated code is up-to-date"
 script = """
 python3 tools/gen_ops.py
+cargo fmt
+uv run ruff format pyrope/__init__.pyi --quiet
 if ! git diff --exit-code src/py/op_generated.rs pyrope/__init__.pyi; then
-    echo "❌ Generated code is out of date. Run 'makers gen' to update."
+    echo "❌ Generated code is out of date. Run 'makers gen && makers fmt-all' to update."
     exit 1
 fi
 echo "✅ Generated code is up-to-date"

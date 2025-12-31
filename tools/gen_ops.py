@@ -310,10 +310,11 @@ def generate_ns_classes_stub(specs: list[OpSpec]) -> str:
         for spec in ns_specs[ns]:
             lines.append("    @staticmethod")
             lines.append(_make_stub_signature(spec, indent="    "))
-        lines.append("")  # Empty line after each class
+        lines.append("")  # Two empty lines between classes (PEP 8)
+        lines.append("")
 
-    # Remove trailing empty line
-    if lines and lines[-1] == "":
+    # Remove trailing empty lines
+    while lines and lines[-1] == "":
         lines.pop()
 
     lines.append("# END GENERATED NS")
