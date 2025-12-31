@@ -130,6 +130,8 @@ Note: `Blueprint.for_type(...)` is a type-hinting helper for Python type checker
 
 When integrating exception-based code, use `exception_to_ropust_error()` to normalize Python exceptions into the shared `RopustError` format.
 
+Why a shared error format? It keeps errors consistent across Python/Rust boundaries and lets you reliably capture metadata (like `py_traceback`) without losing context. The full format and field meanings are documented in [docs/errors.md](docs/errors.md).
+
 ## Syntactic Sugar: `@do` Decorator
 
 Generator-based short-circuiting reproduces Rust's `?` operator in Python.
