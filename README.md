@@ -115,11 +115,11 @@ else:
 
 Supported operators are listed in [docs](docs/operations.md).
 
-`Op.json_decode()` enables a fast Rust JSON path when it is the first operator in a Blueprint. `Op.map_py(...)` runs a Python callback inside the pipeline (slower, but flexible). If the callback raises, the error becomes `RopeError` with code `py_exception`, and the traceback is stored in `err.metadata["py_traceback"]`.
+`Op.json_decode()` enables a fast Rust JSON path when it is the first operator in a Blueprint. `Op.map_py(...)` runs a Python callback inside the pipeline (slower, but flexible). If the callback raises, the error becomes `RopustError` with code `py_exception`, and the traceback is stored in `err.metadata["py_traceback"]`.
 
 Note: `Blueprint.for_type(...)` is a type-hinting helper for Python type checkers. It does not enforce runtime type checks.
 
-When integrating exception-based code, use `exception_to_rope_error()` to normalize Python exceptions into the shared `RopeError` format.
+When integrating exception-based code, use `exception_to_ropust_error()` to normalize Python exceptions into the shared `RopustError` format.
 
 ## Quick Start
 
@@ -197,7 +197,7 @@ def fetch_data(url: str) -> dict:
     response.raise_for_status()
     return response.json()
 
-# Now returns Result[dict, RopeError] instead of raising
+# Now returns Result[dict, RopustError] instead of raising
 result = fetch_data("https://api.example.com/data")
 if result.is_ok():
     data = result.unwrap()
@@ -218,7 +218,7 @@ from pyropust import Result
 
 # Inline exception handling
 result = Result.attempt(lambda: int("not-a-number"), ValueError)
-# Returns Err(RopeError) instead of raising ValueError
+# Returns Err(RopustError) instead of raising ValueError
 ```
 
 ### Converting Results to Exceptions: `unwrap_or_raise`

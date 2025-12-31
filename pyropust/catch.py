@@ -4,7 +4,7 @@ from collections.abc import Callable
 from functools import wraps
 from typing import overload
 
-from .pyropust_native import Result, RopeError
+from .pyropust_native import Result, RopustError
 
 
 def _is_exception_type(value: object) -> bool:
@@ -14,9 +14,9 @@ def _is_exception_type(value: object) -> bool:
 def _decorate[**P, R](
     fn: Callable[P, R],
     exc_types: tuple[type[BaseException], ...],
-) -> Callable[P, Result[R, RopeError]]:
+) -> Callable[P, Result[R, RopustError]]:
     @wraps(fn)
-    def wrapper(*args: P.args, **kwargs: P.kwargs) -> Result[R, RopeError]:
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> Result[R, RopustError]:
         return Result.attempt(lambda: fn(*args, **kwargs), *exc_types)
 
     return wrapper
@@ -24,23 +24,23 @@ def _decorate[**P, R](
 
 # Overload 1: Bare decorator usage (@catch)
 @overload
-def catch[**P, R](fn: Callable[P, R], /) -> Callable[P, Result[R, RopeError]]: ...
+def catch[**P, R](fn: Callable[P, R], /) -> Callable[P, Result[R, RopustError]]: ...
 
 
 # Overload 2: Decorator with exception types (@catch() or @catch(ValueError))
 @overload
 def catch[**P, R](
     *exc_types: type[BaseException],
-) -> Callable[[Callable[P, R]], Callable[P, Result[R, RopeError]]]: ...
+) -> Callable[[Callable[P, R]], Callable[P, Result[R, RopustError]]]: ...
 
 
 def catch[**P, R](
     *args: type[BaseException] | Callable[P, R],
 ) -> (
-    Callable[P, Result[R, RopeError]]
-    | Callable[[Callable[P, R]], Callable[P, Result[R, RopeError]]]
+    Callable[P, Result[R, RopustError]]
+    | Callable[[Callable[P, R]], Callable[P, Result[R, RopustError]]]
 ):
-    """Convert exceptions into Result using RopeError.
+    """Convert exceptions into Result using RopustError.
 
     Can be used as @catch or @catch(ValueError, TypeError).
     """
@@ -59,7 +59,7 @@ def catch[**P, R](
     if not exc_types:
         exc_types = [Exception]
 
-    def decorator(fn: Callable[P, R]) -> Callable[P, Result[R, RopeError]]:
+    def decorator(fn: Callable[P, R]) -> Callable[P, Result[R, RopustError]]:
         return _decorate(fn, tuple(exc_types))
 
     return decorator

@@ -12,9 +12,9 @@ try:
         Operator,
         Option,
         Result,
-        RopeError,
+        RopustError,
         Some,
-        exception_to_rope_error,
+        exception_to_ropust_error,
         run,
     )
 except ModuleNotFoundError as exc:
@@ -32,10 +32,10 @@ __all__ = [
     "Operator",
     "Option",
     "Result",
-    "RopeError",
+    "RopustError",
     "Some",
     "catch",
     "do",
-    "exception_to_rope_error",
+    "exception_to_ropust_error",
     "run",
 ]

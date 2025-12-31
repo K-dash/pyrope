@@ -3,7 +3,7 @@ use pyo3::prelude::*;
 use pyo3::types::{PyAny, PyTuple, PyType};
 use pyo3::Bound;
 
-use super::error::build_rope_error_from_pyerr;
+use super::error::build_ropust_error_from_pyerr;
 
 #[pyclass(name = "Result")]
 pub struct ResultObj {
@@ -93,7 +93,7 @@ impl ResultObj {
             }
             Err(err) => {
                 if should_catch(py, &err, exceptions)? {
-                    Ok(rope_error_from_exception(py, err))
+                    Ok(ropust_error_from_exception(py, err))
                 } else {
                     Err(err)
                 }
@@ -166,7 +166,7 @@ fn should_catch(py: Python<'_>, err: &PyErr, exceptions: &Bound<'_, PyTuple>) ->
     Ok(false)
 }
 
-fn rope_error_from_exception(py: Python<'_>, py_err: PyErr) -> ResultObj {
-    let err_obj = build_rope_error_from_pyerr(py, py_err, "py_exception");
+fn ropust_error_from_exception(py: Python<'_>, py_err: PyErr) -> ResultObj {
+    let err_obj = build_ropust_error_from_pyerr(py, py_err, "py_exception");
     err(err_obj.into())
 }

@@ -24,7 +24,7 @@ from pyropust import (
     Operator,
     Option,
     Result,
-    RopeError,
+    RopustError,
     Some,
     catch,
     do,
@@ -68,9 +68,9 @@ if TYPE_CHECKING:
     # unwrap_or_raise returns ok value type
     assert_type(res.unwrap_or_raise(RuntimeError("boom")), int)
 
-    # attempt returns Result[T, RopeError]
+    # attempt returns Result[T, RopustError]
     attempt_ok = Result.attempt(lambda: 123)
-    assert_type(attempt_ok, Result[int, RopeError])
+    assert_type(attempt_ok, Result[int, RopustError])
 
     # map transforms the Ok value, preserves error type
     mapped = res.map(lambda x: str(x))
@@ -167,7 +167,7 @@ if TYPE_CHECKING:
         return int(value)
 
     parsed = parse_int("123")
-    assert_type(parsed, Result[int, RopeError])
+    assert_type(parsed, Result[int, RopustError])
 
     # ==========================================================================
     # Operator: Flat API (backward compatible)
@@ -297,16 +297,16 @@ if TYPE_CHECKING:
 
     bp_for_run = Blueprint.for_type(str).pipe(Op.split("@"))
     result_from_run = run(bp_for_run, "a@b")
-    assert_type(result_from_run, Result[list[str], RopeError])
+    assert_type(result_from_run, Result[list[str], RopustError])
 
     # ==========================================================================
-    # RopeError properties
+    # RopustError properties
     # ==========================================================================
 
-    def get_rope_error() -> RopeError:
+    def get_ropust_error() -> RopustError:
         raise NotImplementedError
 
-    rope_err = get_rope_error()
+    rope_err = get_ropust_error()
 
     assert_type(rope_err.kind, ErrorKind)
     assert_type(rope_err.code, str)

@@ -190,7 +190,7 @@ pyropust/
 │   │   └── error.rs         # Error handling
 │   └── py/                  # PyO3 exposed classes
 │       ├── blueprint.rs     # Blueprint class
-│       ├── error.rs         # RopeError class
+│       ├── error.rs         # RopustError class
 │       ├── op_generated.rs  # Generated Op class
 │       ├── operator.rs      # Operator class
 │       └── result.rs        # Result/Option classes
@@ -210,7 +210,7 @@ pyropust/
 
 ## Type Safety Principles
 
-1. **`Op.assert_*` methods are validators, not converters**: They return `Err(RopeError)` if preconditions aren't met
+1. **`Op.assert_*` methods are validators, not converters**: They return `Err(RopustError)` if preconditions aren't met
 2. **`Op.index` / `Op.get` return `object`**: Use `Op.expect_str()` or similar to narrow types
 3. **`.pipe()` only connects compatible types**: Type checkers verify the pipeline at build time
 4. **For dynamic input, use guards**: `Blueprint.any().guard_str()` explicitly narrows types

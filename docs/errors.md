@@ -1,10 +1,10 @@
-# RopeError Format
+# RopustError Format
 
 This document defines the shared error format used by pyropust across Python and Rust boundaries. The goal is to make error exchange predictable between extensions and libraries.
 
 ## Dict Format
 
-`RopeError.to_dict()` returns a dictionary with the following keys:
+`RopustError.to_dict()` returns a dictionary with the following keys:
 
 - `kind`: string
   - One of `"InvalidInput"`, `"NotFound"`, `"Internal"`.
@@ -52,14 +52,14 @@ Extensions may add additional keys, but should avoid collisions with the reserve
 
 ## Conversion APIs
 
-### `RopeError.to_dict()`
+### `RopustError.to_dict()`
 Returns the format above.
 
-### `RopeError.from_dict(data)`
-Creates a `RopeError` from a dict following the format.
+### `RopustError.from_dict(data)`
+Creates a `RopustError` from a dict following the format.
 
-### `exception_to_rope_error(exc, code="py_exception")`
-Normalizes a Python exception into `RopeError`.
+### `exception_to_ropust_error(exc, code="py_exception")`
+Normalizes a Python exception into `RopustError`.
 
 - `code` defaults to `"py_exception"`.
 - `metadata["py_traceback"]` is populated when available.

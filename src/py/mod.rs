@@ -6,7 +6,7 @@ mod option;
 mod result;
 
 pub use blueprint::{run, Blueprint};
-pub use error::{exception_to_rope_error, ErrorKindObj, RopeError};
+pub use error::{exception_to_ropust_error, ErrorKindObj, RopustError};
 // BEGIN GENERATED EXPORTS
 pub use op_generated::{Op, OpCoerce, OpCore, OpMap, OpSeq, OpText};
 // END GENERATED EXPORTS

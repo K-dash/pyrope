@@ -63,7 +63,7 @@ impl ErrorKindObj {
 
 #[pyclass(frozen)]
 #[derive(Clone)]
-pub struct RopeError {
+pub struct RopustError {
     pub kind: ErrorKind,
     pub code: String,
     pub message: String,
@@ -76,7 +76,7 @@ pub struct RopeError {
 }
 
 #[pymethods]
-impl RopeError {
+impl RopustError {
     #[getter]
     fn kind(&self, py: Python<'_>) -> Py<ErrorKindObj> {
         Py::new(py, ErrorKindObj { kind: self.kind }).expect("ErrorKind alloc")
@@ -139,7 +139,7 @@ impl RopeError {
 
     fn __repr__(&self) -> String {
         format!(
-            "RopeError(kind=ErrorKind.{}, code='{}', message='{}')",
+            "RopustError(kind=ErrorKind.{}, code='{}', message='{}')",
             self.kind.as_str(),
             self.code,
             self.message
@@ -246,7 +246,7 @@ impl RopeError {
             }
         }
 
-        Ok(RopeError {
+        Ok(RopustError {
             kind,
             code,
             message,
@@ -262,23 +262,23 @@ impl RopeError {
 
 #[pyfunction]
 #[pyo3(signature = (exc, code = "py_exception"))]
-pub fn exception_to_rope_error(
+pub fn exception_to_ropust_error(
     py: Python<'_>,
     exc: Py<PyAny>,
     code: &str,
-) -> PyResult<Py<RopeError>> {
+) -> PyResult<Py<RopustError>> {
     let exc_ref = exc.bind(py);
     let base_exc = py.get_type::<PyBaseException>();
     if !exc_ref.is_instance(base_exc.as_any())? {
         return Err(PyTypeError::new_err(
-            "exception_to_rope_error expects an exception instance",
+            "exception_to_ropust_error expects an exception instance",
         ));
     }
     let py_err = PyErr::from_value(exc_ref.clone());
-    Ok(build_rope_error_from_pyerr(py, py_err, code))
+    Ok(build_ropust_error_from_pyerr(py, py_err, code))
 }
 
-pub fn build_rope_error_from_pyerr(py: Python<'_>, py_err: PyErr, code: &str) -> Py<RopeError> {
+pub fn build_ropust_error_from_pyerr(py: Python<'_>, py_err: PyErr, code: &str) -> Py<RopustError> {
     let mut metadata = HashMap::new();
     if let Ok(name) = py_err.get_type(py).name() {
         metadata.insert("exception".to_string(), name.to_string());
@@ -293,7 +293,7 @@ pub fn build_rope_error_from_pyerr(py: Python<'_>, py_err: PyErr, code: &str) ->
         .and_then(|s| s.to_str().ok().map(|v| v.to_string()));
     Py::new(
         py,
-        RopeError {
+        RopustError {
             kind: ErrorKind::Internal,
             code: code.to_string(),
             message: py_err.to_string(),
@@ -305,7 +305,7 @@ pub fn build_rope_error_from_pyerr(py: Python<'_>, py_err: PyErr, code: &str) ->
             cause,
         },
     )
-    .expect("rope error alloc")
+    .expect("ropust error alloc")
 }
 
 fn format_traceback(py: Python<'_>, py_err: &PyErr) -> Option<String> {

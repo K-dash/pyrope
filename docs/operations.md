@@ -135,4 +135,4 @@ This document lists the operators available in `Op` and their behavior. Operator
 - `map_py(func: Callable[[T], U])`
   - Input: object
   - Output: object
-  - Behavior: calls the Python function with the current value. Exceptions are converted to `RopeError` with code `py_exception` and traceback stored in `metadata["py_traceback"]`.
+  - Behavior: calls the Python function with the current value. Exceptions are converted to `RopustError` with code `py_exception` and traceback stored in `metadata["py_traceback"]`.
