@@ -18,11 +18,13 @@ fn pyrope_native(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<RopeError>()?;
     m.add_class::<Operator>()?;
     m.add_class::<Blueprint>()?;
+    // BEGIN GENERATED CLASSES
     m.add_class::<Op>()?;
     m.add_class::<OpCoerce>()?;
     m.add_class::<OpMap>()?;
     m.add_class::<OpSeq>()?;
     m.add_class::<OpText>()?;
+    // END GENERATED CLASSES
     m.add_function(wrap_pyfunction!(py_ok, m)?)?;
     m.add_function(wrap_pyfunction!(py_err, m)?)?;
     m.add_function(wrap_pyfunction!(py_some, m)?)?;

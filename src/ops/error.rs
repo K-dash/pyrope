@@ -4,7 +4,7 @@ pub enum OpErrorKind {
     NotFound,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum PathItem {
     Key(String),
     Index(usize),

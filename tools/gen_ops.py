@@ -370,11 +370,45 @@ def update_python_stub(pyi_path: Path, op_content: str, ns_content: str) -> None
     pyi_path.write_text(content)
 
 
+def generate_mod_exports(specs: list[OpSpec]) -> str:
+    """Generate py/mod.rs exports content."""
+    # Collect unique namespaces
+    namespaces = sorted({spec.ns for spec in specs if spec.ns})
+    ns_classes = ["Op"] + [_ns_to_class_name(ns) for ns in namespaces]
+    exports = ", ".join(ns_classes)
+    return (
+        f"// BEGIN GENERATED EXPORTS\n"
+        f"pub use op_generated::{{{exports}}};\n"
+        f"// END GENERATED EXPORTS"
+    )
+
+
+def generate_lib_classes(specs: list[OpSpec]) -> str:
+    """Generate lib.rs add_class content."""
+    # Collect unique namespaces
+    namespaces = sorted({spec.ns for spec in specs if spec.ns})
+    ns_classes = ["Op"] + [_ns_to_class_name(ns) for ns in namespaces]
+
+    lines = ["    // BEGIN GENERATED CLASSES"]
+    lines.extend(f"    m.add_class::<{cls}>()?;" for cls in ns_classes)
+    lines.append("    // END GENERATED CLASSES")
+    return "\n".join(lines)
+
+
+def update_rust_file(path: Path, begin: str, end: str, new_content: str) -> None:
+    """Update content between markers in a Rust file."""
+    content = path.read_text()
+    content = _update_between_markers(content, begin, end, new_content)
+    path.write_text(content)
+
+
 def main() -> None:
     """Run the operator code generator."""
     root = Path(__file__).parent.parent
     kind_rs = root / "src/ops/kind.rs"
     op_generated_rs = root / "src/py/op_generated.rs"
+    mod_rs = root / "src/py/mod.rs"
+    lib_rs = root / "src/lib.rs"
     pyi = root / "pyrope/__init__.pyi"
 
     print(f"📖 Parsing {kind_rs}...")
@@ -399,6 +433,14 @@ def main() -> None:
     if not rust_code.endswith("\n"):
         rust_code += "\n"
     op_generated_rs.write_text(rust_code)
+
+    print(f"🦀 Updating {mod_rs}...")
+    mod_exports = generate_mod_exports(specs)
+    update_rust_file(mod_rs, "// BEGIN GENERATED EXPORTS", "// END GENERATED EXPORTS", mod_exports)
+
+    print(f"🦀 Updating {lib_rs}...")
+    lib_classes = generate_lib_classes(specs)
+    update_rust_file(lib_rs, "// BEGIN GENERATED CLASSES", "// END GENERATED CLASSES", lib_classes)
 
     print(f"🐍 Updating {pyi}...")
     op_stub_content = generate_python_stub(specs)

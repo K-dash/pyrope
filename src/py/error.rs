@@ -2,11 +2,8 @@ use pyo3::prelude::*;
 use pyo3::types::{PyAny, PyDict, PyList, PyString};
 use std::collections::HashMap;
 
-#[derive(Clone, Debug)]
-pub enum PathItem {
-    Key(String),
-    Index(usize),
-}
+// Re-export PathItem from ops to avoid duplication
+pub use crate::ops::PathItem;
 
 #[derive(Clone, Copy, Debug)]
 pub enum ErrorKind {

@@ -6,9 +6,10 @@ use super::error::{OpError, OpErrorKind, PathItem};
 use super::kind::OperatorKind;
 
 pub fn apply(op: &OperatorKind, value: Value) -> Result<Value, OpError> {
+    let op_name = op.name();
     match op {
         OperatorKind::AssertStr => {
-            let text = expect_str("AssertStr", value)?;
+            let text = expect_str(op_name, value)?;
             Ok(Value::Str(text))
         }
         OperatorKind::Split { delim } => {
@@ -17,13 +18,13 @@ pub fn apply(op: &OperatorKind, value: Value) -> Result<Value, OpError> {
                     kind: OpErrorKind::InvalidInput,
                     code: "invalid_delim",
                     message: "Split delimiter must not be empty",
-                    op: "Split",
+                    op: op_name,
                     path: Vec::new(),
                     expected: Some("non-empty string"),
                     got: Some("empty string".to_string()),
                 });
             }
-            let text = expect_str("Split", value)?;
+            let text = expect_str(op_name, value)?;
             Ok(Value::List(
                 text.split(delim)
                     .map(|part| Value::Str(part.to_string()))
@@ -31,39 +32,39 @@ pub fn apply(op: &OperatorKind, value: Value) -> Result<Value, OpError> {
             ))
         }
         OperatorKind::Index { idx } => {
-            let items = expect_list("Index", value)?;
+            let items = expect_list(op_name, value)?;
             items.get(*idx).cloned().ok_or_else(|| OpError {
                 kind: OpErrorKind::NotFound,
                 code: "index_out_of_range",
                 message: "Index out of range",
-                op: "Index",
+                op: op_name,
                 path: vec![PathItem::Index(*idx)],
                 expected: None,
                 got: None,
             })
         }
         OperatorKind::GetKey { key } => {
-            let map = expect_map("GetKey", value)?;
+            let map = expect_map(op_name, value)?;
             map.get(key).cloned().ok_or_else(|| OpError {
                 kind: OpErrorKind::NotFound,
                 code: "key_not_found",
                 message: "Key not found",
-                op: "GetKey",
+                op: op_name,
                 path: vec![PathItem::Key(key.clone())],
                 expected: None,
                 got: None,
             })
         }
         OperatorKind::ToUppercase => {
-            let text = expect_str("ToUppercase", value)?;
+            let text = expect_str(op_name, value)?;
             Ok(Value::Str(text.to_uppercase()))
         }
         OperatorKind::ExpectStr => {
-            let text = expect_str("ExpectStr", value)?;
+            let text = expect_str(op_name, value)?;
             Ok(Value::Str(text))
         }
         OperatorKind::Len => {
-            let text = expect_str("Len", value)?;
+            let text = expect_str(op_name, value)?;
             Ok(Value::Int(text.len() as i64))
         }
     }

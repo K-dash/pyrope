@@ -1,7 +1,8 @@
-use super::error::{ErrorKind, PathItem, RopeError};
+use super::error::{ErrorKind, RopeError};
 use super::operator::Operator;
 use super::result::{err, ok, ResultObj};
 use crate::data::{py_to_value, value_to_py};
+use crate::ops::PathItem;
 use crate::ops::{apply, OpError, OpErrorKind, OperatorKind};
 use pyo3::prelude::*;
 use pyo3::types::{PyAny, PyType};
@@ -80,14 +81,6 @@ fn op_error_to_result(py: Python<'_>, e: OpError) -> ResultObj {
         OpErrorKind::InvalidInput => ErrorKind::InvalidInput,
         OpErrorKind::NotFound => ErrorKind::NotFound,
     };
-    let path: Vec<PathItem> = e
-        .path
-        .into_iter()
-        .map(|p| match p {
-            crate::ops::PathItem::Key(k) => PathItem::Key(k),
-            crate::ops::PathItem::Index(i) => PathItem::Index(i),
-        })
-        .collect();
     rope_error(
         py,
         kind,
@@ -95,7 +88,7 @@ fn op_error_to_result(py: Python<'_>, e: OpError) -> ResultObj {
         e.message,
         None,
         Some(e.op.to_string()),
-        path,
+        e.path, // No conversion needed - same type now
         e.expected.map(|s| s.to_string()),
         e.got,
         None,

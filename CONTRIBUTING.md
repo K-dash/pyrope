@@ -59,12 +59,24 @@ The generator (`tools/gen_ops.py`) reads metadata from `src/ops/kind.rs` and gen
 ```rust
 /// @op name=my_op py=my_op
 /// @sig in=str out=int
+/// @ns text
 /// @param arg:str
 MyOp { arg: String },
 ```
 
 2. Add implementation to `src/ops/apply.rs`
 3. Run `makers gen` to regenerate code
+4. Run `makers all` to verify everything works
+
+**When adding a new namespace (e.g., `@ns json`):**
+
+1. Add operators with the new `@ns` tag in `src/ops/kind.rs`
+2. Run `makers gen` - this automatically updates:
+   - `src/py/op_generated.rs` (creates `OpJson` class)
+   - `src/py/mod.rs` (adds export)
+   - `src/lib.rs` (adds `m.add_class::<OpJson>()`)
+   - `pyrope/__init__.pyi` (adds type stubs)
+3. **Manual step**: Add `OpJson` to the `use py::{...}` import in `src/lib.rs`
 4. Run `makers all` to verify everything works
 
 ### Formatting
