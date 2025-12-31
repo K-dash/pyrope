@@ -112,3 +112,46 @@ def test_namespace_and_flat_api_equivalence() -> None:
     result_flat = run(bp_flat, input_data)
 
     assert result_ns.unwrap() == result_flat.unwrap() == "EXAMPLE.COM"
+
+
+def test_len_operator_universal() -> None:
+    """Test len() works on str, bytes, list, and map."""
+    # String length
+    bp_str = Blueprint().pipe(Op.coerce.assert_str()).pipe(Op.core.len())
+    result = run(bp_str, "hello")
+    assert result.is_ok()
+    assert result.unwrap() == 5
+
+    # List length
+    bp_list = Blueprint().pipe(Op.core.len())
+    result = run(bp_list, [1, 2, 3, 4])
+    assert result.is_ok()
+    assert result.unwrap() == 4
+
+    # Map length
+    result = run(bp_list, {"a": 1, "b": 2, "c": 3})
+    assert result.is_ok()
+    assert result.unwrap() == 3
+
+    # Bytes length
+    result = run(bp_list, b"hello world")
+    assert result.is_ok()
+    assert result.unwrap() == 11
+
+    # len() should fail on unsupported types (int, bool, null)
+    fail_result = run(bp_list, 42)
+    assert fail_result.is_err()
+    err = fail_result.unwrap_err()
+    assert err.code == "type_mismatch"
+    assert "str|bytes|list|map" in (err.expected or "")
+
+
+def test_len_backward_compat_aliases() -> None:
+    """Test that Op.len() and Op.text.len() are available as aliases."""
+    bp_flat = Blueprint().pipe(Op.len())
+    bp_text = Blueprint().pipe(Op.text.len())
+
+    result_flat = run(bp_flat, "test")
+    result_text = run(bp_text, "test")
+
+    assert result_flat.unwrap() == result_text.unwrap() == 4

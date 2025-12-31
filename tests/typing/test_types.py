@@ -176,7 +176,9 @@ if TYPE_CHECKING:
     # Text operators
     assert_type(Op.split("@"), Operator[str, list[str]])
     assert_type(Op.to_uppercase(), Operator[str, str])
-    assert_type(Op.len(), Operator[str, int])
+
+    # Core operators (len is universal: str/bytes/list/map)
+    assert_type(Op.len(), Operator[object, int])
 
     # Sequence operators
     assert_type(Op.index(0), Operator[Sequence[object], object])

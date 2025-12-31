@@ -26,6 +26,20 @@ impl OpCoerce {
     }
 }
 
+/// Namespace for core operations
+#[pyclass(frozen, name = "OpCore")]
+pub struct OpCore;
+
+#[pymethods]
+impl OpCore {
+    #[staticmethod]
+    pub fn len() -> Operator {
+        Operator {
+            kind: OperatorKind::Len,
+        }
+    }
+}
+
 /// Namespace for map operations
 #[pyclass(frozen, name = "OpMap")]
 pub struct OpMap;
@@ -94,6 +108,11 @@ impl Op {
     }
 
     #[classattr]
+    fn core() -> OpCore {
+        OpCore
+    }
+
+    #[classattr]
     fn map() -> OpMap {
         OpMap
     }
@@ -122,6 +141,12 @@ impl Op {
 
     /// Alias for backward compatibility
     #[staticmethod]
+    pub fn len() -> Operator {
+        OpCore::len()
+    }
+
+    /// Alias for backward compatibility
+    #[staticmethod]
     pub fn get(key: String) -> Operator {
         OpMap::get(key)
     }
@@ -142,11 +167,5 @@ impl Op {
     #[staticmethod]
     pub fn to_uppercase() -> Operator {
         OpText::to_uppercase()
-    }
-
-    /// Alias for backward compatibility
-    #[staticmethod]
-    pub fn len() -> Operator {
-        OpText::len()
     }
 }

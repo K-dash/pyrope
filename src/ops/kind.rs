@@ -34,8 +34,9 @@ pub enum OperatorKind {
     ToUppercase,
 
     /// @op name=len py=len
-    /// @sig in=str out=int
-    /// @ns text
+    /// @sig in=object out=int
+    /// @ns core
+    /// @alias text
     Len,
 }
 

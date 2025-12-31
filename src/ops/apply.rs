@@ -63,10 +63,17 @@ pub fn apply(op: &OperatorKind, value: Value) -> Result<Value, OpError> {
             let text = expect_str(op_name, value)?;
             Ok(Value::Str(text))
         }
-        OperatorKind::Len => {
-            let text = expect_str(op_name, value)?;
-            Ok(Value::Int(text.len() as i64))
-        }
+        OperatorKind::Len => match value {
+            Value::Str(s) => Ok(Value::Int(s.len() as i64)),
+            Value::Bytes(b) => Ok(Value::Int(b.len() as i64)),
+            Value::List(v) => Ok(Value::Int(v.len() as i64)),
+            Value::Map(m) => Ok(Value::Int(m.len() as i64)),
+            other => Err(OpError::type_mismatch(
+                op_name,
+                "str|bytes|list|map",
+                other.type_name().to_string(),
+            )),
+        },
     }
 }
 
