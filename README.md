@@ -19,6 +19,15 @@ Common problems it helps with:
 2. **No implicit None**: Force explicit `unwrap()` or `is_some()` checks
 3. **Rust-like short-circuiting**: Reproduce Rust's `?` operator in Python using generators
 
+## Quick Start
+
+Start small and adopt features gradually:
+
+1. Wrap exceptions with `@catch` to get `Result`.
+2. Use `Result`/`Option` explicitly in Python code.
+3. Use `@do` for short-circuiting chains.
+4. Introduce `Blueprint` for typed pipelines.
+
 ## Direct Usage
 
 You can use `Result` and `Option` types directly for manual handling or functional chaining, just like in Rust.
@@ -120,30 +129,6 @@ Supported operators are listed in [docs](docs/operations.md).
 Note: `Blueprint.for_type(...)` is a type-hinting helper for Python type checkers. It does not enforce runtime type checks.
 
 When integrating exception-based code, use `exception_to_ropust_error()` to normalize Python exceptions into the shared `RopustError` format.
-
-## Quick Start
-
-Start small and adopt features gradually:
-
-1. Wrap exceptions with `@catch` to get `Result`.
-2. Use `Result`/`Option` explicitly in Python code.
-3. Use `@do` for short-circuiting chains.
-4. Introduce `Blueprint` for typed pipelines.
-
-### Benchmark (reproducible, no extra deps)
-
-Run the included `timeit` benchmark to compare a pure-Python pipeline vs `Blueprint`. The benchmark builds the Blueprint in setup and measures `run()` only:
-
-```bash
-uv run python bench/bench_blueprint_vs_python.py
-```
-
-What the latest results show (summary only):
-- Performance is workload-dependent; some cases are slower, some are comparable, and some benefit from fewer boundary crossings.
-- Larger pipelines and repeated runs can show improvements, but tiny operators can be slower.
-- Treat benchmarks as measurements, not a promise of speedups.
-
-Full results and methodology are documented in `docs/benchmarks.md`.
 
 ## Syntactic Sugar: `@do` Decorator
 
@@ -268,6 +253,25 @@ makers ci
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, code generation system, and testing guidelines.
 
+## Benchmarks
+
+Performance is workload-dependent. The primary value of `Blueprint` is type-safety and composability, not guaranteed speedups.
+
+Run the included benchmark:
+
+```bash
+uv run python bench/bench_blueprint_vs_python.py
+```
+
+Key findings:
+- Performance varies by workload; some cases are slower, some are comparable, and some benefit from fewer boundary crossings.
+- Larger pipelines and repeated runs can show improvements, but tiny operators can be slower.
+- Treat benchmarks as measurements, not a promise of speedups.
+
+**For detailed results and methodology, see [docs/benchmarks.md](docs/benchmarks.md).**
+
 ## License
 
-This is a proof-of-concept project and is not intended for production use.
+MIT License - see [LICENSE](LICENSE) file for details.
+
+Copyright (c) 2025 K-dash
