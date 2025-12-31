@@ -53,7 +53,7 @@ You do not need to switch everything at once. A realistic path is:
 
 ## Key concepts
 
-## 1) Result and Option
+### 1) Result and Option
 
 Rust-style `Result[T, E]` and `Option[T]` as first-class values.
 
