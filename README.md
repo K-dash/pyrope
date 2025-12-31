@@ -2,22 +2,24 @@
 
 A proof-of-concept library that brings Rust's `Result` and `Option` types to Python, treating failures as values instead of exceptions.
 
-The concept: "Drop a rope (type safety from Rust) into the dangerous freedom of Python."
+The concept: "A robust rope for your Python orchestration. Drop a Ropust into the dangerous freedom of Python."
 
 ## Who This Is For
 
 Pyropust is for Python developers who want explicit, type-safe control over error flow and data transformations, especially when bridging Python and Rust or when pipelines become hard to reason about with exceptions alone.
 
 Common problems it helps with:
+
 - Making error propagation explicit and type-checked (Result/Option).
 - Defining typed, composable pipelines with predictable failure modes (Blueprint).
 - Keeping Python↔Rust boundaries safe without scattering try/except logic.
 
 ## Why Not Exceptions?
 
-1. **Explicit control flow**: Treat failures as values, not control flow jumps
-2. **No implicit None**: Force explicit `unwrap()` or `is_some()` checks
-3. **Rust-like short-circuiting**: Reproduce Rust's `?` operator in Python using generators
+1. **Explicit control flow**: Treat failures as values, not control flow jumps.
+2. **Error Locality**: Handle errors exactly where they happen, making the code easier to trace.
+3. **No implicit None**: Force explicit `unwrap()` or `is_some()` checks.
+4. **Railway Oriented**: Naturally build linear pipelines where data flows or short-circuits safely.using generators
 
 ## Quick Start
 
@@ -65,8 +67,7 @@ res = (
 print(res.unwrap())  # "Value is 246"
 ```
 
-> [!TIP]
-> **Type Hint for `and_then`**: When using `and_then` with a callback that may return `Err`, define the initial `Result` with an explicit return type annotation. This ensures the error type is correctly inferred.
+> [!TIP] > **Type Hint for `and_then`**: When using `and_then` with a callback that may return `Err`, define the initial `Result` with an explicit return type annotation. This ensures the error type is correctly inferred.
 >
 > ```python
 > from pyropust import Ok, Err, Result
@@ -267,6 +268,7 @@ uv run python bench/bench_blueprint_vs_python.py
 ```
 
 Key findings:
+
 - Performance varies by workload; some cases are slower, some are comparable, and some benefit from fewer boundary crossings.
 - Larger pipelines and repeated runs can show improvements, but tiny operators can be slower.
 - Treat benchmarks as measurements, not a promise of speedups.
