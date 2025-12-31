@@ -5,8 +5,6 @@ import sys
 from pathlib import Path
 from typing import Any, cast
 
-import pytest
-
 
 def _import_gen_ops() -> Any:
     """Import tools/gen_ops.py as a module (tools/ is not a package)."""
@@ -126,15 +124,20 @@ def test_generate_python_stub_and_update_replaces_marked_region(tmp_path: Path) 
         )
     ]
 
-    new_stub = cast("str", gen_ops.generate_python_stub(specs))
+    op_stub = cast("str", gen_ops.generate_python_stub(specs))
+    ns_stub = cast("str", gen_ops.generate_ns_classes_stub(specs))
+
     # Generated stub now has no indentation (indentation is added during replacement)
-    assert new_stub.startswith("# BEGIN GENERATED OP")
-    assert "def len() -> Operator[str, int]:" in new_stub
-    assert new_stub.rstrip().endswith("# END GENERATED OP")
+    assert op_stub.startswith("# BEGIN GENERATED OP")
+    assert "def len() -> Operator[str, int]:" in op_stub
+    assert op_stub.rstrip().endswith("# END GENERATED OP")
 
     pyi = tmp_path / "__init__.pyi"
     pyi.write_text(
         """class Operator: ...
+
+# BEGIN GENERATED NS
+# END GENERATED NS
 
 class Op:
     # BEGIN GENERATED OP
@@ -146,7 +149,7 @@ def Ok(): ...
 """
     )
 
-    gen_ops.update_python_stub(pyi, new_stub)
+    gen_ops.update_python_stub(pyi, op_stub, ns_stub)
 
     updated = pyi.read_text()
     assert "def old()" not in updated
@@ -156,11 +159,20 @@ def Ok(): ...
     assert "def Ok(): ..." in updated
 
 
-def test_update_python_stub_raises_without_markers(tmp_path: Path) -> None:
+def test_update_python_stub_skips_missing_markers(tmp_path: Path) -> None:
+    """Test that update_python_stub gracefully handles missing markers."""
     gen_ops = _import_gen_ops()
 
     pyi = tmp_path / "__init__.pyi"
-    pyi.write_text("class Op:\n    pass\n")
+    original_content = "class Op:\n    pass\n"
+    pyi.write_text(original_content)
 
-    with pytest.raises(ValueError, match="Markers not found"):
-        gen_ops.update_python_stub(pyi, "    # BEGIN GENERATED OP\n    # END GENERATED OP")
+    # Should not raise, just leave content unchanged
+    gen_ops.update_python_stub(
+        pyi,
+        "# BEGIN GENERATED OP\n# END GENERATED OP",
+        "# BEGIN GENERATED NS\n# END GENERATED NS",
+    )
+
+    # Content should be unchanged since markers are not found
+    assert pyi.read_text() == original_content

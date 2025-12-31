@@ -2,29 +2,35 @@
 pub enum OperatorKind {
     /// @op name=assert_str py=assert_str
     /// @sig in=object out=str
+    /// @ns coerce
     AssertStr,
 
     /// @op name=expect_str py=expect_str
     /// @sig in=object out=str
+    /// @ns coerce
     ExpectStr,
 
     /// @op name=split py=split
     /// @sig in=str out=list[str]
+    /// @ns text
     /// @param delim:str
     Split { delim: String },
 
     /// @op name=index py=index
     /// @sig in=Sequence[object] out=object
+    /// @ns seq
     /// @param idx:int
     Index { idx: usize },
 
     /// @op name=get py=get
     /// @sig in=Mapping[str, object] out=object
+    /// @ns map
     /// @param key:str
     GetKey { key: String },
 
     /// @op name=to_uppercase py=to_uppercase
     /// @sig in=str out=str
+    /// @ns text
     ToUppercase,
 
     /// @op name=len py=len

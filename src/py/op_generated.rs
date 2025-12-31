@@ -5,12 +5,12 @@ use crate::ops::OperatorKind;
 use crate::py::operator::Operator;
 use pyo3::prelude::*;
 
-/// Static factory class for creating Operators
-#[pyclass(frozen, name = "Op")]
-pub struct Op;
+/// Namespace for coerce operations
+#[pyclass(frozen, name = "OpCoerce")]
+pub struct OpCoerce;
 
 #[pymethods]
-impl Op {
+impl OpCoerce {
     #[staticmethod]
     pub fn assert_str() -> Operator {
         Operator {
@@ -24,25 +24,46 @@ impl Op {
             kind: OperatorKind::ExpectStr,
         }
     }
+}
 
+/// Namespace for map operations
+#[pyclass(frozen, name = "OpMap")]
+pub struct OpMap;
+
+#[pymethods]
+impl OpMap {
     #[staticmethod]
-    pub fn split(delim: String) -> Operator {
+    pub fn get(key: String) -> Operator {
         Operator {
-            kind: OperatorKind::Split { delim },
+            kind: OperatorKind::GetKey { key },
         }
     }
+}
 
+/// Namespace for seq operations
+#[pyclass(frozen, name = "OpSeq")]
+pub struct OpSeq;
+
+#[pymethods]
+impl OpSeq {
     #[staticmethod]
     pub fn index(idx: usize) -> Operator {
         Operator {
             kind: OperatorKind::Index { idx },
         }
     }
+}
 
+/// Namespace for text operations
+#[pyclass(frozen, name = "OpText")]
+pub struct OpText;
+
+#[pymethods]
+impl OpText {
     #[staticmethod]
-    pub fn get(key: String) -> Operator {
+    pub fn split(delim: String) -> Operator {
         Operator {
-            kind: OperatorKind::GetKey { key },
+            kind: OperatorKind::Split { delim },
         }
     }
 
@@ -52,11 +73,74 @@ impl Op {
             kind: OperatorKind::ToUppercase,
         }
     }
+}
+
+/// Static factory class for creating Operators
+#[pyclass(frozen, name = "Op")]
+pub struct Op;
+
+#[pymethods]
+impl Op {
+    #[classattr]
+    fn coerce() -> OpCoerce {
+        OpCoerce
+    }
+
+    #[classattr]
+    fn map() -> OpMap {
+        OpMap
+    }
+
+    #[classattr]
+    fn seq() -> OpSeq {
+        OpSeq
+    }
+
+    #[classattr]
+    fn text() -> OpText {
+        OpText
+    }
 
     #[staticmethod]
     pub fn len() -> Operator {
         Operator {
             kind: OperatorKind::Len,
         }
+    }
+
+    /// Alias for backward compatibility
+    #[staticmethod]
+    pub fn assert_str() -> Operator {
+        OpCoerce::assert_str()
+    }
+
+    /// Alias for backward compatibility
+    #[staticmethod]
+    pub fn expect_str() -> Operator {
+        OpCoerce::expect_str()
+    }
+
+    /// Alias for backward compatibility
+    #[staticmethod]
+    pub fn get(key: String) -> Operator {
+        OpMap::get(key)
+    }
+
+    /// Alias for backward compatibility
+    #[staticmethod]
+    pub fn index(idx: usize) -> Operator {
+        OpSeq::index(idx)
+    }
+
+    /// Alias for backward compatibility
+    #[staticmethod]
+    pub fn split(delim: String) -> Operator {
+        OpText::split(delim)
+    }
+
+    /// Alias for backward compatibility
+    #[staticmethod]
+    pub fn to_uppercase() -> Operator {
+        OpText::to_uppercase()
     }
 }

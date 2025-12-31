@@ -67,3 +67,48 @@ def test_expect_str_operator() -> None:
     )
     fail_result = run(fail_bp, "hello world")
     assert fail_result.is_err()
+
+
+def test_namespace_style_operators() -> None:
+    """Test namespaced operators (Op.text.*, Op.seq.*, etc.)."""
+    bp = (
+        Blueprint()
+        .pipe(Op.coerce.assert_str())  # Narrow type to str first
+        .pipe(Op.text.split(","))
+        .pipe(Op.seq.index(0))
+        .pipe(Op.coerce.expect_str())
+        .pipe(Op.text.to_uppercase())
+    )
+
+    result = run(bp, "hello,world")
+    assert result.is_ok()
+    assert result.unwrap() == "HELLO"
+
+
+def test_namespace_and_flat_api_equivalence() -> None:
+    """Test that namespace and flat API produce identical results."""
+    # Namespace style
+    bp_ns = (
+        Blueprint()
+        .pipe(Op.coerce.assert_str())  # Narrow type to str first
+        .pipe(Op.text.split("@"))
+        .pipe(Op.seq.index(1))
+        .pipe(Op.coerce.expect_str())
+        .pipe(Op.text.to_uppercase())
+    )
+
+    # Flat style (backward compatibility)
+    bp_flat = (
+        Blueprint()
+        .pipe(Op.assert_str())  # Narrow type to str first
+        .pipe(Op.split("@"))
+        .pipe(Op.index(1))
+        .pipe(Op.expect_str())
+        .pipe(Op.to_uppercase())
+    )
+
+    input_data = "alice@example.com"
+    result_ns = run(bp_ns, input_data)
+    result_flat = run(bp_flat, input_data)
+
+    assert result_ns.unwrap() == result_flat.unwrap() == "EXAMPLE.COM"

@@ -6,6 +6,6 @@ mod result;
 
 pub use blueprint::{run, Blueprint};
 pub use error::{ErrorKindObj, RopeError};
-pub use op_generated::Op;
+pub use op_generated::{Op, OpCoerce, OpMap, OpSeq, OpText};
 pub use operator::Operator;
 pub use result::{py_err, py_none, py_ok, py_some, OptionObj, ResultObj};
