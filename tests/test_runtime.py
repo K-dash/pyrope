@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from collections.abc import Generator
 
-from pyrope import Err, None_, Ok, Result, Some, do
+import pytest
+
+from pyrope import Err, None_, Ok, Result, RopeError, Some, catch, do
 
 
 def test_result_ok_err() -> None:
@@ -42,3 +44,37 @@ def test_do_short_circuit() -> None:
 
     assert flow("hello").unwrap() == "HELLO"
     assert flow("invalid").is_err() is False
+
+
+def test_result_attempt_and_catch() -> None:
+    ok = Result.attempt(lambda: 10 / 2)
+    assert ok.is_ok() is True
+    assert ok.unwrap() == 5.0
+
+    err = Result.attempt(lambda: 10 / 0, ZeroDivisionError)
+    assert err.is_err() is True
+    assert isinstance(err.unwrap_err(), RopeError)
+
+    try:
+        Result.attempt(lambda: 10 / 0, ValueError)
+    except ZeroDivisionError:
+        pass
+    else:
+        raise AssertionError("non-matching exceptions must be re-raised")
+
+    @catch(ValueError)
+    def parse_int(value: str) -> int:
+        return int(value)
+
+    result = parse_int("not-int")
+    assert result.is_err() is True
+    assert isinstance(result.unwrap_err(), RopeError)
+
+
+def test_unwrap_or_raise() -> None:
+    ok = Ok(123)
+    assert ok.unwrap_or_raise(RuntimeError("boom")) == 123
+
+    err = Err("nope")
+    with pytest.raises(RuntimeError, match="boom"):
+        err.unwrap_or_raise(RuntimeError("boom"))

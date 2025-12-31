@@ -26,6 +26,7 @@ from pyrope import (
     Result,
     RopeError,
     Some,
+    catch,
     do,
     run,
 )
@@ -63,6 +64,13 @@ if TYPE_CHECKING:
 
     # unwrap_err returns the Err value type
     assert_type(res.unwrap_err(), str)
+
+    # unwrap_or_raise returns ok value type
+    assert_type(res.unwrap_or_raise(RuntimeError("boom")), int)
+
+    # attempt returns Result[T, RopeError]
+    attempt_ok = Result.attempt(lambda: 123)
+    assert_type(attempt_ok, Result[int, RopeError])
 
     # map transforms the Ok value, preserves error type
     mapped = res.map(lambda x: str(x))
@@ -149,6 +157,17 @@ if TYPE_CHECKING:
 
     name = name_opt.unwrap_or("Guest")
     assert_type(name, str)
+
+    # ==========================================================================
+    # Result: Border control helpers
+    # ==========================================================================
+
+    @catch(ValueError)
+    def parse_int(value: str) -> int:
+        return int(value)
+
+    parsed = parse_int("123")
+    assert_type(parsed, Result[int, RopeError])
 
     # ==========================================================================
     # Operator: Flat API (backward compatible)

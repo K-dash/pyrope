@@ -1,5 +1,5 @@
 from collections.abc import Callable, Generator, Mapping, Sequence
-from typing import Generic, Never, TypeVar
+from typing import Generic, Never, TypeVar, overload
 
 # Variance-sensitive type parameters require old-style TypeVar
 T_co = TypeVar("T_co", covariant=True)
@@ -15,6 +15,11 @@ class Result(Generic[T_co, E_co]):
     def map[U](self, f: Callable[[T_co], U]) -> Result[U, E_co]: ...
     def map_err[U](self, f: Callable[[E_co], U]) -> Result[T_co, U]: ...
     def and_then[U](self, f: Callable[[T_co], Result[U, E_co]]) -> Result[U, E_co]: ...
+    def unwrap_or_raise(self, exc: BaseException) -> T_co: ...
+    @classmethod
+    def attempt[T](
+        cls, f: Callable[[], T], *exceptions: type[BaseException]
+    ) -> Result[T, RopeError]: ...
 
 class Option(Generic[T_co]):
     def is_some(self) -> bool: ...
@@ -116,5 +121,23 @@ def do[**P, T, E, R](fn: Callable[P, Do[T, E, R]]) -> Callable[P, Result[R, E]]:
 def run[OrigIn, Out](
     blueprint: Blueprint[OrigIn, Out], input: OrigIn
 ) -> Result[Out, RopeError]: ...
+
+# Overload 1: Decorator with exception types (@catch() or @catch(ValueError, ...))
+# Note: mypy reports overlap with overload 3 because type[BaseException] and Callable
+# cannot be distinguished statically, but runtime correctly handles this.
+@overload
+def catch[R](  # type: ignore[overload-overlap]
+    exc: type[BaseException],
+    /,
+    *more_exceptions: type[BaseException],
+) -> Callable[[Callable[..., R]], Callable[..., Result[R, RopeError]]]: ...
+
+# Overload 2: Decorator without arguments (@catch())
+@overload
+def catch[R]() -> Callable[[Callable[..., R]], Callable[..., Result[R, RopeError]]]: ...
+
+# Overload 3: Bare decorator usage (@catch)
+@overload
+def catch[R](fn: Callable[..., R], /) -> Callable[..., Result[R, RopeError]]: ...
 
 __all__: list[str]

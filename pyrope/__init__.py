@@ -1,3 +1,4 @@
+from .catch import catch
 from .do import do
 
 try:
@@ -32,6 +33,7 @@ __all__ = [
     "Result",
     "RopeError",
     "Some",
+    "catch",
     "do",
     "run",
 ]

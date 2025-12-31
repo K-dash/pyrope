@@ -118,6 +118,84 @@ def process(value: str) -> Result[str, object]:
 print(process("hello").unwrap())  # "Processed: HELLO"
 ```
 
+## Border Control: Exception Interoperability
+
+Real-world Python code uses libraries like `requests`, `boto3`, and `sqlalchemy` that throw exceptions. pyrope provides tools to safely bridge between the "exception world" and the "Result world".
+
+### Converting Exceptions to Results: `@catch`
+
+Use `@catch` to wrap exception-throwing code and convert it into safe `Result` values.
+
+```python
+from pyrope import catch
+import requests
+
+# Wrap existing libraries that throw exceptions
+@catch(requests.RequestException)
+def fetch_data(url: str) -> dict:
+    response = requests.get(url)
+    response.raise_for_status()
+    return response.json()
+
+# Now returns Result[dict, RopeError] instead of raising
+result = fetch_data("https://api.example.com/data")
+if result.is_ok():
+    data = result.unwrap()
+else:
+    print(f"Failed to fetch: {result.unwrap_err().message}")
+```
+
+**When to use:**
+
+- Wrapping third-party libraries that throw exceptions
+- Creating safe boundaries around risky I/O operations
+- Gradually introducing pyrope into existing codebases
+
+You can also use `@catch` without arguments to catch all exceptions, or use `Result.attempt()` directly:
+
+```python
+from pyrope import Result
+
+# Inline exception handling
+result = Result.attempt(lambda: int("not-a-number"), ValueError)
+# Returns Err(RopeError) instead of raising ValueError
+```
+
+### Converting Results to Exceptions: `unwrap_or_raise`
+
+At the edges of your application (e.g., web framework endpoints), you may need to convert `Result` back into exceptions.
+
+```python
+from pyrope import Result, do, catch
+from fastapi import FastAPI, HTTPException
+
+app = FastAPI()
+
+@catch(ValueError, KeyError)
+def parse_user_input(data: dict) -> dict:
+    return {
+        "age": int(data["age"]),
+        "name": data["name"],
+    }
+
+@app.post("/users")
+def create_user(data: dict):
+    result = parse_user_input(data)
+
+    # Convert Result to exception at the framework boundary
+    parsed = result.unwrap_or_raise(
+        HTTPException(status_code=400, detail="Invalid input")
+    )
+
+    return {"user": parsed}
+```
+
+**When to use:**
+
+- Framework endpoints (FastAPI, Flask, Django)
+- CLI tools that need to exit with error codes
+- Any boundary where exceptions are the expected error handling mechanism
+
 ## Type Checker Support
 
 - **Pyright**: Primary focus - verifies that `yield` correctly infers types
