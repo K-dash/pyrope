@@ -67,5 +67,8 @@ jobs:
         with:
           tool: cargo-make
 
+      - name: Sync Python dependencies
+        run: uv sync --extra dev
+
       - name: Run check task
         run: cargo make check
