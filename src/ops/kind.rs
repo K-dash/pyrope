@@ -31,6 +31,11 @@ pub enum OperatorKind {
     /// @param format:str
     AsDatetime { format: String },
 
+    /// @op name=json_decode py=json_decode
+    /// @sig in=str | bytes out=Mapping[str, object]
+    /// @ns coerce
+    JsonDecode,
+
     /// @op name=split py=split
     /// @sig in=str out=list[str]
     /// @ns text
@@ -70,6 +75,7 @@ impl OperatorKind {
             OperatorKind::AsFloat => "AsFloat",
             OperatorKind::AsBool => "AsBool",
             OperatorKind::AsDatetime { .. } => "AsDatetime",
+            OperatorKind::JsonDecode => "JsonDecode",
             OperatorKind::Split { .. } => "Split",
             OperatorKind::Index { .. } => "Index",
             OperatorKind::GetKey { .. } => "GetKey",

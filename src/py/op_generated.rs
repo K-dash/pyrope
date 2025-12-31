@@ -52,6 +52,13 @@ impl OpCoerce {
             kind: OperatorKind::AsDatetime { format },
         }
     }
+
+    #[staticmethod]
+    pub fn json_decode() -> Operator {
+        Operator {
+            kind: OperatorKind::JsonDecode,
+        }
+    }
 }
 
 /// Namespace for core operations
@@ -189,6 +196,12 @@ impl Op {
     #[staticmethod]
     pub fn as_datetime(format: String) -> Operator {
         OpCoerce::as_datetime(format)
+    }
+
+    /// Alias for backward compatibility
+    #[staticmethod]
+    pub fn json_decode() -> Operator {
+        OpCoerce::json_decode()
     }
 
     /// Alias for backward compatibility

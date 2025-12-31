@@ -1,11 +1,11 @@
 use super::error::{ErrorKind, RopeError};
 use super::operator::Operator;
 use super::result::{err, ok, ResultObj};
-use crate::data::{py_to_value, value_to_py};
+use crate::data::{py_to_value, serde_to_value, value_to_py};
 use crate::ops::PathItem;
 use crate::ops::{apply, OpError, OperatorKind};
 use pyo3::prelude::*;
-use pyo3::types::{PyAny, PyType};
+use pyo3::types::{PyAny, PyBytes, PyType};
 use std::collections::HashMap;
 
 #[pyclass]
@@ -55,29 +55,85 @@ impl Blueprint {
 
 #[pyfunction]
 pub fn run(py: Python<'_>, blueprint: PyRef<'_, Blueprint>, input: Py<PyAny>) -> ResultObj {
-    let mut current = match py_to_value(input.bind(py)) {
-        Ok(value) => value,
-        Err(e) => {
+    let mut current = if matches!(blueprint.ops.first(), Some(OperatorKind::JsonDecode)) {
+        let input_any = input.bind(py);
+        let parsed = if let Ok(text) = input_any.extract::<String>() {
+            serde_json::from_str(&text)
+        } else if let Ok(bytes) = input_any.cast_exact::<PyBytes>() {
+            serde_json::from_slice(bytes.as_bytes())
+        } else {
+            let type_name = input_any
+                .get_type()
+                .name()
+                .and_then(|name| name.to_str().map(|s| s.to_string()))
+                .unwrap_or_else(|_| "unknown".to_string());
             return rope_error(
                 py,
                 ErrorKind::InvalidInput,
-                e.code,
-                e.message,
+                "type_mismatch",
+                "JSON input must be str or bytes",
                 None,
-                Some("Input".to_string()),
+                Some("JsonDecode".to_string()),
                 Vec::new(),
-                Some(e.expected.to_string()),
-                Some(e.got),
+                Some("str|bytes".to_string()),
+                Some(type_name),
                 None,
-            )
+            );
+        };
+
+        match parsed {
+            Ok(value) => serde_to_value(value),
+            Err(err) => {
+                return rope_error(
+                    py,
+                    ErrorKind::InvalidInput,
+                    "json_parse_error",
+                    "Failed to parse JSON",
+                    None,
+                    Some("JsonDecode".to_string()),
+                    Vec::new(),
+                    Some("valid JSON".to_string()),
+                    Some(err.to_string()),
+                    None,
+                )
+            }
+        }
+    } else {
+        match py_to_value(input.bind(py)) {
+            Ok(value) => value,
+            Err(e) => {
+                return rope_error(
+                    py,
+                    ErrorKind::InvalidInput,
+                    e.code,
+                    e.message,
+                    None,
+                    Some("Input".to_string()),
+                    Vec::new(),
+                    Some(e.expected.to_string()),
+                    Some(e.got),
+                    None,
+                )
+            }
         }
     };
-    for op in &blueprint.ops {
-        match apply(op, current) {
-            Ok(value) => current = value,
-            Err(e) => return op_error_to_result(py, e),
+
+    if matches!(blueprint.ops.first(), Some(OperatorKind::JsonDecode)) {
+        for op in blueprint.ops.iter().skip(1) {
+            match apply(op, current) {
+                Ok(value) => current = value,
+                Err(e) => return op_error_to_result(py, e),
+            }
+        }
+    } else {
+        for op in &blueprint.ops {
+            match apply(op, current) {
+                Ok(value) => current = value,
+                Err(e) => return op_error_to_result(py, e),
+            }
         }
     }
+
     ok(value_to_py(py, current))
 }
 

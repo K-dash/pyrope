@@ -322,3 +322,21 @@ def test_datetime_input_passthrough() -> None:
     assert result.is_ok()
     dt = result.unwrap()
     assert dt == input_dt
+
+
+def test_turbo_json_path() -> None:
+    bp = (
+        Blueprint.for_type(str)
+        .pipe(Op.json_decode())
+        .pipe(Op.get("name"))
+        .pipe(Op.expect_str())
+        .pipe(Op.to_uppercase())
+    )
+
+    res = run(bp, '{"name": "alice", "age": 30}')
+    assert res.is_ok()
+    assert res.unwrap() == "ALICE"
+
+    fail_res = run(bp, '{"name": "alice", ')
+    assert fail_res.is_err()
+    assert fail_res.unwrap_err().code == "json_parse_error"

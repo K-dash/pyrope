@@ -1,6 +1,7 @@
 use chrono::{DateTime, Utc};
 use pyo3::prelude::*;
 use pyo3::types::{PyBool, PyBytes, PyDict, PyFloat, PyInt, PyList, PyString};
+use serde_json::Value as SerdeValue;
 use std::collections::HashMap;
 
 use super::Value;
@@ -120,6 +121,31 @@ pub fn value_to_py(py: Python<'_>, value: Value) -> Py<PyAny> {
                 dict.set_item(k, value_to_py(py, v)).expect("dict set");
             }
             dict.unbind().into()
+        }
+    }
+}
+
+pub fn serde_to_value(value: SerdeValue) -> Value {
+    match value {
+        SerdeValue::Null => Value::Null,
+        SerdeValue::Bool(b) => Value::Bool(b),
+        SerdeValue::Number(n) => {
+            if let Some(i) = n.as_i64() {
+                Value::Int(i)
+            } else if let Some(u) = n.as_u64() {
+                Value::Float(u as f64)
+            } else {
+                Value::Float(n.as_f64().unwrap_or(0.0))
+            }
+        }
+        SerdeValue::String(s) => Value::Str(s),
+        SerdeValue::Array(items) => Value::List(items.into_iter().map(serde_to_value).collect()),
+        SerdeValue::Object(obj) => {
+            let mut map = HashMap::new();
+            for (k, v) in obj {
+                map.insert(k, serde_to_value(v));
+            }
+            Value::Map(map)
         }
     }
 }

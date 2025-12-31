@@ -1,6 +1,6 @@
 use chrono::{NaiveDate, NaiveDateTime, NaiveTime, TimeZone, Utc};
 
-use crate::data::Value;
+use crate::data::{serde_to_value, Value};
 
 use super::super::error::{ErrorKind, OpError};
 use super::expect_str_value;
@@ -122,4 +122,36 @@ pub(super) fn as_datetime(op: &'static str, value: Value, format: &str) -> Resul
             other.type_name().to_string(),
         )),
     }
+}
+
+pub(super) fn json_decode(op: &'static str, value: Value) -> Result<Value, OpError> {
+    let parsed = match value {
+        Value::Str(s) => serde_json::from_str(&s).map_err(|err| OpError {
+            kind: ErrorKind::InvalidInput,
+            code: "json_parse_error",
+            message: "Failed to parse JSON",
+            op,
+            path: Vec::new(),
+            expected: Some("valid JSON string"),
+            got: Some(err.to_string()),
+        })?,
+        Value::Bytes(bytes) => serde_json::from_slice(&bytes).map_err(|err| OpError {
+            kind: ErrorKind::InvalidInput,
+            code: "json_parse_error",
+            message: "Failed to parse JSON",
+            op,
+            path: Vec::new(),
+            expected: Some("valid JSON bytes"),
+            got: Some(err.to_string()),
+        })?,
+        other => {
+            return Err(OpError::type_mismatch(
+                op,
+                "str|bytes",
+                other.type_name().to_string(),
+            ))
+        }
+    };
+
+    Ok(serde_to_value(parsed))
 }

@@ -189,6 +189,7 @@ if TYPE_CHECKING:
     # Coercion operators
     assert_type(Op.assert_str(), Operator[object, str])
     assert_type(Op.expect_str(), Operator[object, str])
+    assert_type(Op.json_decode(), Operator[str | bytes, Mapping[str, object]])
 
     # ==========================================================================
     # Operator: Namespace API
@@ -207,6 +208,7 @@ if TYPE_CHECKING:
     # Op.coerce namespace
     assert_type(Op.coerce.assert_str(), Operator[object, str])
     assert_type(Op.coerce.expect_str(), Operator[object, str])
+    assert_type(Op.coerce.json_decode(), Operator[str | bytes, Mapping[str, object]])
 
     # ==========================================================================
     # Blueprint: Construction and Chaining

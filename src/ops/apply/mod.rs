@@ -20,6 +20,7 @@ pub fn apply(op: &OperatorKind, value: Value) -> Result<Value, OpError> {
         OperatorKind::AsFloat => coerce::as_float(op_name, value),
         OperatorKind::AsBool => coerce::as_bool(op_name, value),
         OperatorKind::AsDatetime { format } => coerce::as_datetime(op_name, value, format),
+        OperatorKind::JsonDecode => coerce::json_decode(op_name, value),
         OperatorKind::Split { delim } => text::split(op_name, value, delim),
         OperatorKind::ToUppercase => text::to_uppercase(op_name, value),
         OperatorKind::Index { idx } => seq::index(op_name, value, *idx),
