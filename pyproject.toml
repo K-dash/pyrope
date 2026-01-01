@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "pyropust"
-version = "0.1.0"
+version = "0.2.0"
 description = "Rust Result/Option types exposed to Python with @do generator short-circuiting"
 readme = "README.md"
 requires-python = ">=3.12"
