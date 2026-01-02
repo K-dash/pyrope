@@ -2,6 +2,7 @@ use pyo3::exceptions::{PyRuntimeError, PyTypeError};
 use pyo3::prelude::*;
 use pyo3::types::PyTuple;
 
+use super::error::{build_error_from_parts, Error};
 use super::result::{err, ok, ResultObj};
 
 #[pyclass(name = "Option")]
@@ -248,7 +249,7 @@ impl OptionObj {
                 Ok(ok(py_option.into()))
             } else {
                 let err_value = res_ref.err.as_ref().expect("err value").clone_ref(py);
-                Ok(err(py, err_value))
+                Ok(err(err_value))
             }
         } else {
             let option_obj = none_();
@@ -280,22 +281,62 @@ impl OptionObj {
     }
 
     // Result conversion methods
-    fn ok_or(&self, py: Python<'_>, error: Py<PyAny>) -> ResultObj {
-        if self.is_some {
-            let value = self.value.as_ref().expect("some value").clone_ref(py);
-            ok(value)
-        } else {
-            err(py, error)
-        }
-    }
-
-    fn ok_or_else(&self, py: Python<'_>, f: Bound<'_, PyAny>) -> PyResult<ResultObj> {
+    #[allow(clippy::too_many_arguments)]
+    #[pyo3(signature = (code, message, *, kind = None, metadata = None, op = None, path = None, expected = None, got = None, cause = None))]
+    fn ok_or(
+        &self,
+        py: Python<'_>,
+        code: Py<PyAny>,
+        message: &str,
+        kind: Option<Py<PyAny>>,
+        metadata: Option<Py<PyAny>>,
+        op: Option<String>,
+        path: Option<Py<PyAny>>,
+        expected: Option<String>,
+        got: Option<String>,
+        cause: Option<String>,
+    ) -> PyResult<ResultObj> {
         if self.is_some {
             let value = self.value.as_ref().expect("some value").clone_ref(py);
             Ok(ok(value))
         } else {
-            let error = f.call0()?;
-            Ok(err(py, error.into()))
+            let error = build_error_from_parts(
+                py, code, message, kind, metadata, op, path, expected, got, cause,
+            )?;
+            Ok(err(Py::new(py, error)?.into()))
+        }
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    #[pyo3(signature = (code, f, *, kind = None, metadata = None, op = None, path = None, expected = None, got = None, cause = None))]
+    fn ok_or_else(
+        &self,
+        py: Python<'_>,
+        code: Py<PyAny>,
+        f: Bound<'_, PyAny>,
+        kind: Option<Py<PyAny>>,
+        metadata: Option<Py<PyAny>>,
+        op: Option<String>,
+        path: Option<Py<PyAny>>,
+        expected: Option<String>,
+        got: Option<String>,
+        cause: Option<String>,
+    ) -> PyResult<ResultObj> {
+        if self.is_some {
+            let value = self.value.as_ref().expect("some value").clone_ref(py);
+            Ok(ok(value))
+        } else {
+            let error_ref = f.call0()?;
+            let error_type = py.get_type::<Error>();
+            if error_ref.is_instance(error_type.as_any())? {
+                Ok(err(error_ref.unbind()))
+            } else {
+                let message = error_ref.extract::<String>()?;
+                let error = build_error_from_parts(
+                    py, code, &message, kind, metadata, op, path, expected, got, cause,
+                )?;
+                Ok(err(Py::new(py, error)?.into()))
+            }
         }
     }
 }

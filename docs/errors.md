@@ -1,15 +1,16 @@
-# RopustError Format
+# Error Format
 
 This document defines the shared error format used by pyropust across Python and Rust boundaries. The goal is to make error exchange predictable between extensions and libraries.
 
 ## Dict Format
 
-`RopustError.to_dict()` returns a dictionary with the following keys:
+`Error.to_dict()` returns a dictionary with the following keys:
 
 - `kind`: string
   - One of `"InvalidInput"`, `"NotFound"`, `"Internal"`.
 - `code`: string
   - Stable, machine-readable error code (e.g., `"type_mismatch"`, `"py_exception"`).
+  - Typically the `value` of an `ErrorCode` (`StrEnum`) in Python.
 - `message`: string
   - Human-readable summary.
 - `op`: string | None
@@ -52,14 +53,14 @@ Extensions may add additional keys, but should avoid collisions with the reserve
 
 ## Conversion APIs
 
-### `RopustError.to_dict()`
+### `Error.to_dict()`
 Returns the format above.
 
-### `RopustError.from_dict(data)`
-Creates a `RopustError` from a dict following the format.
+### `Error.from_dict(data)`
+Creates an `Error` from a dict following the format.
 
-### `exception_to_ropust_error(exc, code="py_exception")`
-Normalizes a Python exception into `RopustError`.
+### `exception_to_error(exc, code="py_exception")`
+Normalizes a Python exception into `Error`.
 
 - `code` defaults to `"py_exception"`.
 - `metadata["py_traceback"]` is populated when available.

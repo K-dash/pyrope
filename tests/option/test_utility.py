@@ -9,7 +9,8 @@ from __future__ import annotations
 
 import pytest
 
-from pyropust import Err, None_, Ok, Option, Result, Some
+from pyropust import Error, ErrorCode, None_, Ok, Option, Result, Some
+from tests_support import err_msg
 
 
 class TestOptionFlatten:
@@ -70,7 +71,7 @@ class TestOptionTranspose:
     def test_transpose_some_ok(self) -> None:
         """Transpose Some(Ok(value)) -> Ok(Some(value))."""
 
-        def make_some_ok() -> Option[Result[int]]:
+        def make_some_ok() -> Option[Result[int, Error[ErrorCode]]]:
             return Some(Ok(42))
 
         opt = make_some_ok()
@@ -81,19 +82,19 @@ class TestOptionTranspose:
         assert unwrapped.unwrap() == 42
 
     def test_transpose_some_err(self) -> None:
-        """Transpose Some(Err(error)) -> Err(error)."""
+        """Transpose Some(err(...)) -> err(...)."""
 
-        def make_err() -> Result[int]:
-            return Err("error")
+        def make_err() -> Result[int, Error[ErrorCode]]:
+            return err_msg("error")
 
-        opt: Option[Result[int]] = Some(make_err())
+        opt: Option[Result[int, Error[ErrorCode]]] = Some(make_err())
         result = opt.transpose()
         assert result.is_err()
         assert result.unwrap_err().message == "error"
 
     def test_transpose_none(self) -> None:
         """Transpose None -> Ok(None)."""
-        opt: Option[Result[int]] = None_()
+        opt: Option[Result[int, Error[ErrorCode]]] = None_()
         result = opt.transpose()
         assert result.is_ok()
         unwrapped = result.unwrap()
@@ -108,15 +109,15 @@ class TestOptionTranspose:
     def test_transpose_round_trip_some(self) -> None:
         """Verify transpose is reversible for Some(Ok(value))."""
 
-        def make_option() -> Option[Result[int]]:
+        def make_option() -> Option[Result[int, Error[ErrorCode]]]:
             return Some(Ok(42))
 
         opt = make_option()
-        # Option[Result[T]] -> Result[Option[T]]
+        # Option[Result[T, E]] -> Result[Option[T], E]
         transposed = opt.transpose()
         assert transposed.is_ok()
 
-        # Result[Option[T]] -> Option[Result[T]]
+        # Result[Option[T], E] -> Option[Result[T, E]]
         back = transposed.transpose()
         assert back.is_some()
         inner_result = back.unwrap()
@@ -126,15 +127,15 @@ class TestOptionTranspose:
     def test_transpose_round_trip_none(self) -> None:
         """Verify transpose is reversible for None."""
 
-        def make_option() -> Option[Result[int]]:
+        def make_option() -> Option[Result[int, Error[ErrorCode]]]:
             return None_()
 
         opt = make_option()
-        # Option[Result[T]] -> Result[Option[T]]
+        # Option[Result[T, E]] -> Result[Option[T], E]
         transposed = opt.transpose()
         assert transposed.is_ok()
 
-        # Result[Option[T]] -> Option[Result[T]]
+        # Result[Option[T], E] -> Option[Result[T, E]]
         back = transposed.transpose()
         assert back.is_none()
 
