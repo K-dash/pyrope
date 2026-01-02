@@ -16,7 +16,6 @@ T_co = TypeVar("T_co", covariant=True)
 E_co = TypeVar("E_co", covariant=True)
 In_contra = TypeVar("In_contra", contravariant=True)
 Out_co = TypeVar("Out_co", covariant=True)
-CodeT = TypeVar("CodeT", bound=ErrorCode)
 
 class Result(Generic[T_co, E_co]):
     def is_ok(self) -> bool: ...
@@ -37,7 +36,7 @@ class Result(Generic[T_co, E_co]):
     def map_or_else[U](self, default_f: Callable[[E_co], U], f: Callable[[T_co], U]) -> U: ...
     def inspect(self, f: Callable[[T_co], object]) -> Result[T_co, E_co]: ...
     def inspect_err(self, f: Callable[[E_co], object]) -> Result[T_co, E_co]: ...
-    def context(
+    def context[CodeT: ErrorCode](
         self: Result[T_co, Error[CodeT]],
         message: str,
         *,
@@ -48,10 +47,10 @@ class Result(Generic[T_co, E_co]):
         expected: str | None = None,
         got: str | None = None,
     ) -> Result[T_co, Error[CodeT]]: ...
-    def with_code(
+    def with_code[CodeT: ErrorCode](
         self: Result[T_co, Error[CodeT]], code: CodeT | str
     ) -> Result[T_co, Error[CodeT]]: ...
-    def map_err_code(
+    def map_err_code[CodeT: ErrorCode](
         self: Result[T_co, Error[CodeT]], prefix: str
     ) -> Result[T_co, Error[CodeT]]: ...
     def and_[U](self, other: Result[U, E_co]) -> Result[U, E_co]: ...
@@ -89,7 +88,7 @@ class Option(Generic[T_co]):
     def transpose[T, E](self: Option[Result[T, E]]) -> Result[Option[T], E]: ...
     def zip[U](self, other: Option[U]) -> Option[tuple[T_co, U]]: ...
     def zip_with[U, R](self, other: Option[U], f: Callable[[T_co, U], R]) -> Option[R]: ...
-    def ok_or(
+    def ok_or[CodeT: ErrorCode](
         self,
         code: CodeT,
         message: str,
@@ -102,7 +101,7 @@ class Option(Generic[T_co]):
         got: str | None = None,
         cause: str | None = None,
     ) -> Result[T_co, Error[CodeT]]: ...
-    def ok_or_else(
+    def ok_or_else[CodeT: ErrorCode](
         self,
         code: CodeT,
         f: Callable[[], str | Error[CodeT]],
@@ -121,7 +120,7 @@ class ErrorKind:
     NotFound: ErrorKind
     Internal: ErrorKind
 
-class Error(Generic[CodeT]):
+class Error[CodeT: ErrorCode]:
     @property
     def kind(self) -> ErrorKind: ...
     @property
