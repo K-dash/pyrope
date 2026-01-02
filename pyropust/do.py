@@ -7,11 +7,11 @@ from typing import TYPE_CHECKING, cast
 from .pyropust_native import Result
 
 
-def do[**P, T, R](
-    fn: Callable[P, Generator[Result[T], T, Result[R]]],
-) -> Callable[P, Result[R]]:
+def do[**P, T, E, R](
+    fn: Callable[P, Generator[Result[T, E], T, Result[R, E]]],
+) -> Callable[P, Result[R, E]]:
     @wraps(fn)
-    def wrapper(*args: P.args, **kwargs: P.kwargs) -> Result[R]:
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> Result[R, E]:
         gen = fn(*args, **kwargs)
         if not hasattr(gen, "send"):
             raise TypeError("@do function must return a generator")
@@ -28,9 +28,9 @@ def do[**P, T, R](
             if not isinstance(current, Result):
                 raise TypeError("yielded value must be Result")
             if current.is_err():
-                # On error, the value type is irrelevant, so cast to Result[R]
+                # On error, the value type is irrelevant, so cast to Result[R, E]
                 if TYPE_CHECKING:
-                    return cast("Result[R]", current)
+                    return cast("Result[R, E]", current)
                 return current
             try:
                 current = gen.send(current.unwrap())

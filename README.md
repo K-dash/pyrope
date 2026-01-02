@@ -56,27 +56,33 @@ You do not need to switch everything at once. A realistic path is:
 
 ### 1) Result and Option
 
-Rust-style `Result[T]` and `Option[T]` as first-class values.
+Rust-style `Result[T, E]` and `Option[T]` as first-class values.
 
 ```python
-from pyropust import Ok, Err, Some, None_
+from pyropust import ErrorCode, Ok, Some, None_, err
+
+class Code(ErrorCode):
+    BOOM = "boom"
 
 value = Ok(10)
-error = Err("boom")
+error = err(Code.BOOM, "boom")
 
 maybe = Some(42)
 empty = None_()
 ```
 
-Result is explicit about failures. All failures are represented as `RopustError`. You can return it from functions and branch on `is_ok / is_err` without exceptions.
+Result is explicit about failures. All failures are represented as `Error`. You can return it from functions and branch on `is_ok / is_err` without exceptions.
 Note: `unwrap()` is intended for tests, examples, and application boundaries. Inside libraries and pipelines, prefer structured propagation (`@do`, `context`, `and_then`).
 
 ```python
-from pyropust import Ok, Err, Result
+from pyropust import Error, ErrorCode, Ok, Result, err
 
-def divide(a: int, b: int) -> Result[float]:
+class Code(ErrorCode):
+    DIVISION_BY_ZERO = "division_by_zero"
+
+def divide(a: int, b: int) -> Result[float, Error[Code]]:
     if b == 0:
-        return Err("division by zero")
+        return err(Code.DIVISION_BY_ZERO, "division by zero")
     return Ok(a / b)
 
 res = divide(10, 2)
@@ -111,12 +117,15 @@ Unlike `Optional[T]` (which is only a type hint), `Option[T]` is a runtime value
 Avoid `if` checks by chaining operations.
 
 ```python
-from pyropust import Ok
+from pyropust import Error, ErrorCode, Ok, Result, err
+
+class Code(ErrorCode):
+    INVALID = "invalid"
 
 res = (
     Ok("123")
-    .map(int)                # Result[int]
-    .map(lambda x: x * 2)    # Result[int]
+    .map(int)                # Result[int, Error[Code]]
+    .map(lambda x: x * 2)    # Result[int, Error[Code]]
     .and_then(lambda x: Ok(f"Value is {x}"))
 )
 print(res.unwrap())  # "Value is 246"
@@ -128,13 +137,16 @@ When to use: `map/and_then` is best for small, expression-style transforms where
 > **Type Hint for `and_then`**: When using `and_then` with a callback that may return `Err`, define the initial `Result` with an explicit return type annotation. This ensures the Ok type is correctly inferred.
 >
 > ```python
-> from pyropust import Ok, Err, Result
+> from pyropust import Error, ErrorCode, Ok, Result, err
 >
-> def fetch_data() -> Result[int]:  # Declare ok type here
+> class Code(ErrorCode):
+>     INVALID = "invalid"
+>
+> def fetch_data() -> Result[int, Error[Code]]:  # Declare ok type here
 >     return Ok(42)
 >
-> def validate(x: int) -> Result[int]:
->     return Err("invalid") if x < 0 else Ok(x)
+> def validate(x: int) -> Result[int, Error[Code]]:
+>     return err(Code.INVALID, "invalid") if x < 0 else Ok(x)
 >
 > # Error type flows correctly through the chain
 > result = fetch_data().and_then(validate)
@@ -146,14 +158,18 @@ In real applications, errors often need additional context as they move up the s
 pyropust provides helpers inspired by Rust’s `context` and error mapping patterns.
 
 ```python
-from pyropust import Result, Err
+from pyropust import Error, ErrorCode, Result, err
 
-def load_config(path: str) -> Result[str]:
-    return Err("file not found")
+class Code(ErrorCode):
+    NOT_FOUND = "not_found"
+    LOAD_FAILED = "config.load"
+
+def load_config(path: str) -> Result[str, Error[Code]]:
+    return err(Code.NOT_FOUND, "file not found")
 
 result = load_config("/etc/app.toml").context(
     "failed to load application config",
-    code="config.load",
+    code=Code.LOAD_FAILED,
 )
 ```
 
@@ -163,7 +179,7 @@ result = load_config("/etc/app.toml").context(
 You can also modify error codes for classification and observability:
 
 ```python
-result = load_config("/etc/app.toml").with_code("config.not_found")
+result = load_config("/etc/app.toml").with_code(Code.NOT_FOUND)
 
 result = load_config("/etc/app.toml").map_err_code("startup")
 ```
@@ -246,7 +262,7 @@ def load_value(payload: str):
 Inside the boundary:
 
 - Exceptions are captured
-- Normalized into `Err`
+    - Normalized into `Error`
 - Enriched with traceback metadata (`py_traceback`)
 
 Outside the boundary:
@@ -261,10 +277,10 @@ This makes error flow visible, testable, and composable.
 The `@do` decorator enables linear, Rust-style propagation of `Result`.
 
 ```python
-from pyropust import Ok, Result, do
+from pyropust import Error, ErrorCode, Ok, Result, do
 
 @do
-def process(data: str) -> Result[str]:
+def process(data: str) -> Result[str, Error[ErrorCode]]:
     text = yield Ok(data)
     return Ok(text.upper())
 ```

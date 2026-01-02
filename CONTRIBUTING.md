@@ -136,7 +136,7 @@ The CI automatically checks if generated code is up-to-date:
 
 ## Type Safety Principles
 
-1. **`Op.assert_*` methods are validators, not converters**: They return `Err(RopustError)` if preconditions aren't met
+1. **`Op.assert_*` methods are validators, not converters**: They return `Err(Error)` if preconditions aren't met
 2. **`Op.index` / `Op.get` return `object`**: Use `Op.expect_str()` or similar to narrow types
 3. **`.pipe()` only connects compatible types**: Type checkers verify the pipeline at build time
 4. **For dynamic input, use guards**: `Blueprint.any().guard_str()` explicitly narrows types

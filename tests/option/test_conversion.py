@@ -7,7 +7,10 @@ Use function return types or intermediate functions to satisfy strict type check
 
 from __future__ import annotations
 
-from pyropust import None_, Option, Some
+from typing import cast
+
+from pyropust import ErrorCode, None_, Option, Some
+from tests_support import SampleCode, wrap_error
 
 
 class TestOptionOkOr:
@@ -16,7 +19,7 @@ class TestOptionOkOr:
     def test_ok_or_returns_ok_on_some(self) -> None:
         """ok_or converts Some to Ok."""
         opt = Some(42)
-        result = opt.ok_or("error")
+        result = opt.ok_or(SampleCode.ERROR, "error")
         assert result.is_ok()
         assert result.unwrap() == 42
 
@@ -27,14 +30,14 @@ class TestOptionOkOr:
             return None_()
 
         opt = none_val()
-        result = opt.ok_or("error")
+        result = opt.ok_or(SampleCode.ERROR, "error")
         assert result.is_err()
         assert result.unwrap_err().message == "error"
 
     def test_ok_or_preserves_value_type(self) -> None:
         """Verify ok_or preserves value type."""
         opt = Some({"key": "value"})
-        result = opt.ok_or("error")
+        result = opt.ok_or(SampleCode.ERROR, "error")
         assert result.unwrap() == {"key": "value"}
 
     def test_ok_or_with_complex_error(self) -> None:
@@ -45,7 +48,11 @@ class TestOptionOkOr:
 
         opt = none_val()
         error = ValueError("validation failed")
-        result = opt.ok_or(error)
+        result = opt.ok_or(
+            SampleCode.VALIDATION,
+            "validation failed",
+            metadata={"cause": str(error)},
+        )
         assert result.is_err()
         assert result.unwrap_err().message.endswith("validation failed")
 
@@ -53,14 +60,14 @@ class TestOptionOkOr:
         """Use case: convert Option to Result for error handling."""
         opt = Some(10)
         # Chain with Result methods
-        value = opt.ok_or("missing").map(lambda x: x * 2).unwrap()
+        value = opt.ok_or(SampleCode.ERROR, "missing").map(lambda x: x * 2).unwrap()
         assert value == 20
 
         def none_val() -> Option[int]:
             return None_()
 
         opt_none = none_val()
-        error = opt_none.ok_or("missing").unwrap_err()
+        error = opt_none.ok_or(SampleCode.ERROR, "missing").unwrap_err()
         assert error.message == "missing"
 
 
@@ -70,7 +77,7 @@ class TestOptionOkOrElse:
     def test_ok_or_else_returns_ok_on_some(self) -> None:
         """ok_or_else converts Some to Ok."""
         opt = Some(42)
-        result = opt.ok_or_else(lambda: "error")
+        result = opt.ok_or_else(SampleCode.ERROR, lambda: "error")
         assert result.is_ok()
         assert result.unwrap() == 42
 
@@ -81,7 +88,7 @@ class TestOptionOkOrElse:
             return None_()
 
         opt = none_val()
-        result = opt.ok_or_else(lambda: "computed error")
+        result = opt.ok_or_else(SampleCode.ERROR, lambda: "computed error")
         assert result.is_err()
         assert result.unwrap_err().message == "computed error"
 
@@ -94,7 +101,7 @@ class TestOptionOkOrElse:
             called.append(True)
             return "error"
 
-        result = opt.ok_or_else(make_error)
+        result = opt.ok_or_else(SampleCode.ERROR, make_error)
         assert result.is_ok()
         assert called == []
 
@@ -105,7 +112,14 @@ class TestOptionOkOrElse:
             return None_()
 
         opt = none_val()
-        result = opt.ok_or_else(lambda: ValueError("dynamically created error"))
+        result = opt.ok_or_else(
+            cast("ErrorCode", SampleCode.ERROR),
+            lambda: wrap_error(
+                ValueError("dynamically created error"),
+                code=SampleCode.ERROR,
+                message="dynamically created error",
+            ),
+        )
         assert result.is_err()
         error = result.unwrap_err()
         assert error.message.endswith("dynamically created error")
@@ -114,7 +128,7 @@ class TestOptionOkOrElse:
         """Use case: avoid creating error unless needed."""
         opt = Some(10)
         # Error is never created for Some
-        value = opt.ok_or_else(lambda: expensive_error()).unwrap()
+        value = opt.ok_or_else(SampleCode.ERROR, lambda: expensive_error()).unwrap()
         assert value == 10
 
         def none_val() -> Option[int]:
@@ -122,7 +136,7 @@ class TestOptionOkOrElse:
 
         opt_none = none_val()
         # Error is only created when needed
-        error = opt_none.ok_or_else(lambda: "lazy error").unwrap_err()
+        error = opt_none.ok_or_else(SampleCode.ERROR, lambda: "lazy error").unwrap_err()
         assert error.message == "lazy error"
 
 

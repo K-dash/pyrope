@@ -56,14 +56,20 @@ impl ErrorKindObj {
         self.__repr__()
     }
 
+    #[classmethod]
+    // Make Error[...] safe at runtime for type-parameterized usage in Python.
+    fn __class_getitem__(cls: &Bound<'_, PyType>, _item: Py<PyAny>) -> PyResult<Py<PyType>> {
+        Ok(cls.clone().unbind())
+    }
+
     fn __eq__(&self, other: PyRef<'_, ErrorKindObj>) -> bool {
         self.kind.as_str() == other.kind.as_str()
     }
 }
 
-#[pyclass(frozen)]
+#[pyclass(frozen, name = "Error")]
 #[derive(Clone)]
-pub struct RopustError {
+pub struct Error {
     pub kind: ErrorKind,
     pub code: String,
     pub message: String,
@@ -76,7 +82,7 @@ pub struct RopustError {
 }
 
 #[pymethods]
-impl RopustError {
+impl Error {
     #[getter]
     fn kind(&self, py: Python<'_>) -> Py<ErrorKindObj> {
         Py::new(py, ErrorKindObj { kind: self.kind }).expect("ErrorKind alloc")
@@ -139,7 +145,7 @@ impl RopustError {
 
     fn __repr__(&self) -> String {
         format!(
-            "RopustError(kind=ErrorKind.{}, code='{}', message='{}')",
+            "Error(kind=ErrorKind.{}, code='{}', message='{}')",
             self.kind.as_str(),
             self.code,
             self.message
@@ -156,7 +162,7 @@ impl RopustError {
     fn new(
         _cls: &Bound<'_, PyType>,
         py: Python<'_>,
-        code: String,
+        code: Py<PyAny>,
         message: String,
         kind: Option<Py<PyAny>>,
         op: Option<String>,
@@ -165,21 +171,9 @@ impl RopustError {
         got: Option<String>,
         metadata: Option<Py<PyAny>>,
     ) -> PyResult<Self> {
-        let kind = extract_kind(py, kind, ErrorKind::InvalidInput)?;
-        let path = extract_path(py, path)?;
-        let metadata = extract_metadata(py, metadata)?;
-
-        Ok(RopustError {
-            kind,
-            code,
-            message,
-            metadata,
-            op,
-            path,
-            expected,
-            got,
-            cause: None,
-        })
+        build_error_from_parts(
+            py, code, &message, kind, metadata, op, path, expected, got, None,
+        )
     }
 
     #[classmethod]
@@ -189,7 +183,7 @@ impl RopustError {
         _cls: &Bound<'_, PyType>,
         py: Python<'_>,
         err: Py<PyAny>,
-        code: String,
+        code: Py<PyAny>,
         message: String,
         kind: Option<Py<PyAny>>,
         op: Option<String>,
@@ -200,25 +194,21 @@ impl RopustError {
     ) -> PyResult<Self> {
         let err_ref = err.bind(py);
         if err_ref.is_none() {
-            return Err(PyTypeError::new_err(
-                "wrap expects an exception or RopustError",
-            ));
+            return Err(PyTypeError::new_err("wrap expects an exception or Error"));
         }
 
         let mut metadata = extract_metadata(py, metadata)?;
 
-        let cause = if let Ok(cause_ref) = err_ref.extract::<PyRef<'_, RopustError>>() {
+        let cause = if let Ok(cause_ref) = err_ref.extract::<PyRef<'_, Error>>() {
             Some(cause_ref.__repr__())
         } else {
             let base_exc = py.get_type::<PyBaseException>();
             if !err_ref.is_instance(base_exc.as_any())? {
-                return Err(PyTypeError::new_err(
-                    "wrap expects an exception or RopustError",
-                ));
+                return Err(PyTypeError::new_err("wrap expects an exception or Error"));
             }
             let py_err = PyErr::from_value(err_ref.clone());
-            let cause_obj = build_ropust_error_from_pyerr(py, py_err, "py_exception");
-            let cause_ref = cause_obj.bind(py).extract::<PyRef<'_, RopustError>>()?;
+            let cause_obj = build_error_from_pyerr(py, py_err, "py_exception");
+            let cause_ref = cause_obj.bind(py).extract::<PyRef<'_, Error>>()?;
             if !metadata.contains_key("cause_exception") {
                 if let Some(value) = cause_ref.metadata.get("exception") {
                     metadata.insert("cause_exception".to_string(), value.to_string());
@@ -234,8 +224,9 @@ impl RopustError {
 
         let kind = extract_kind(py, kind, ErrorKind::Internal)?;
         let path = extract_path(py, path)?;
+        let code = code.bind(py).extract::<String>()?;
 
-        Ok(RopustError {
+        Ok(Error {
             kind,
             code,
             message,
@@ -344,7 +335,7 @@ impl RopustError {
             }
         }
 
-        Ok(RopustError {
+        Ok(Error {
             kind,
             code,
             message,
@@ -360,23 +351,19 @@ impl RopustError {
 
 #[pyfunction]
 #[pyo3(signature = (exc, code = "py_exception"))]
-pub fn exception_to_ropust_error(
-    py: Python<'_>,
-    exc: Py<PyAny>,
-    code: &str,
-) -> PyResult<Py<RopustError>> {
+pub fn exception_to_error(py: Python<'_>, exc: Py<PyAny>, code: &str) -> PyResult<Py<Error>> {
     let exc_ref = exc.bind(py);
     let base_exc = py.get_type::<PyBaseException>();
     if !exc_ref.is_instance(base_exc.as_any())? {
         return Err(PyTypeError::new_err(
-            "exception_to_ropust_error expects an exception instance",
+            "exception_to_error expects an exception instance",
         ));
     }
     let py_err = PyErr::from_value(exc_ref.clone());
-    Ok(build_ropust_error_from_pyerr(py, py_err, code))
+    Ok(build_error_from_pyerr(py, py_err, code))
 }
 
-pub fn build_ropust_error_from_pyerr(py: Python<'_>, py_err: PyErr, code: &str) -> Py<RopustError> {
+pub fn build_error_from_pyerr(py: Python<'_>, py_err: PyErr, code: &str) -> Py<Error> {
     let mut metadata = HashMap::new();
     if let Ok(name) = py_err.get_type(py).name() {
         metadata.insert("exception".to_string(), name.to_string());
@@ -391,7 +378,7 @@ pub fn build_ropust_error_from_pyerr(py: Python<'_>, py_err: PyErr, code: &str) 
         .and_then(|s| s.to_str().ok().map(|v| v.to_string()));
     Py::new(
         py,
-        RopustError {
+        Error {
             kind: ErrorKind::Internal,
             code: code.to_string(),
             message: py_err.to_string(),
@@ -403,7 +390,38 @@ pub fn build_ropust_error_from_pyerr(py: Python<'_>, py_err: PyErr, code: &str) 
             cause,
         },
     )
-    .expect("ropust error alloc")
+    .expect("error alloc")
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn build_error_from_parts(
+    py: Python<'_>,
+    code: Py<PyAny>,
+    message: &str,
+    kind: Option<Py<PyAny>>,
+    metadata: Option<Py<PyAny>>,
+    op: Option<String>,
+    path: Option<Py<PyAny>>,
+    expected: Option<String>,
+    got: Option<String>,
+    cause: Option<String>,
+) -> PyResult<Error> {
+    let kind = extract_kind(py, kind, ErrorKind::InvalidInput)?;
+    let path = extract_path(py, path)?;
+    let metadata = extract_metadata(py, metadata)?;
+    let code = code.bind(py).extract::<String>()?;
+
+    Ok(Error {
+        kind,
+        code,
+        message: message.to_string(),
+        metadata,
+        op,
+        path,
+        expected,
+        got,
+        cause,
+    })
 }
 
 fn format_traceback(py: Python<'_>, py_err: &PyErr) -> Option<String> {

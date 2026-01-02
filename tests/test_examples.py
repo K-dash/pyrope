@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from pyropust import Err, Ok, Result
+from pyropust import Error, ErrorCode, Ok, Result
+from tests_support import err_msg
 
 
 class TestResultManualHandling:
@@ -11,9 +12,9 @@ class TestResultManualHandling:
     def test_readme_example_divide_function(self) -> None:
         """Verify the README divide example works."""
 
-        def divide(a: int, b: int) -> Result[float]:
+        def divide(a: int, b: int) -> Result[float, Error[ErrorCode]]:
             if b == 0:
-                return Err("Division by zero")
+                return err_msg("Division by zero")
             return Ok(a / b)
 
         # Success case

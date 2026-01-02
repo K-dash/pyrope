@@ -5,30 +5,32 @@ from collections.abc import Generator
 import pytest
 
 from pyropust import (
-    Err,
+    Error,
+    ErrorCode,
     ErrorKind,
     None_,
     Ok,
     Result,
-    RopustError,
     Some,
     catch,
     do,
-    exception_to_ropust_error,
+    err,
+    exception_to_error,
 )
+from tests_support import SampleCode, new_error, wrap_error
 
 
 def test_result_ok_err() -> None:
-    ok = Ok(123)
-    err = Err("nope")
+    ok: Result[int, Error[ErrorCode]] = Ok(123)
+    err_result = err(SampleCode.ERROR, "nope")
 
     assert ok.is_ok() is True
     assert ok.is_err() is False
     assert ok.unwrap() == 123
 
-    assert err.is_ok() is False
-    assert err.is_err() is True
-    assert err.unwrap_err().message == "nope"
+    assert err_result.is_ok() is False
+    assert err_result.is_err() is True
+    assert err_result.unwrap_err().message == "nope"
 
 
 def test_option_unwrap() -> None:
@@ -49,7 +51,9 @@ def test_option_unwrap() -> None:
 
 def test_do_short_circuit() -> None:
     @do
-    def flow(value: str) -> Generator[Result[str], str, Result[str]]:
+    def flow(
+        value: str,
+    ) -> Generator[Result[str, Error[ErrorCode]], str, Result[str, Error[ErrorCode]]]:
         value = yield Ok(value)
         return Ok(value.upper())
 
@@ -64,7 +68,7 @@ def test_result_attempt_and_catch() -> None:
 
     err = Result.attempt(lambda: 10 / 0, ZeroDivisionError)
     assert err.is_err() is True
-    assert isinstance(err.unwrap_err(), RopustError)
+    assert isinstance(err.unwrap_err(), Error)
 
     try:
         Result.attempt(lambda: 10 / 0, ValueError)
@@ -79,44 +83,44 @@ def test_result_attempt_and_catch() -> None:
 
     result = parse_int("not-int")
     assert result.is_err() is True
-    assert isinstance(result.unwrap_err(), RopustError)
+    assert isinstance(result.unwrap_err(), Error)
 
 
 def test_unwrap_or_raise() -> None:
-    ok = Ok(123)
+    ok: Result[int, Error[ErrorCode]] = Ok(123)
     assert ok.unwrap_or_raise(RuntimeError("boom")) == 123
 
-    err = Err("nope")
+    err_result = err(SampleCode.ERROR, "nope")
     with pytest.raises(RuntimeError, match="boom"):
-        err.unwrap_or_raise(RuntimeError("boom"))
+        err_result.unwrap_or_raise(RuntimeError("boom"))
 
 
-def test_exception_to_ropust_error() -> None:
+def test_exception_to_error() -> None:
     def raise_value_error() -> None:
         raise ValueError("boom")
 
     try:
         raise_value_error()
     except ValueError as exc:
-        err = exception_to_ropust_error(exc)
-        assert isinstance(err, RopustError)
+        err = exception_to_error(exc)
+        assert isinstance(err, Error)
         assert err.code == "py_exception"
         assert "py_traceback" in err.metadata
 
 
-def test_ropust_error_dict_roundtrip() -> None:
+def test_error_dict_roundtrip() -> None:
     def raise_value_error() -> None:
         raise ValueError("boom")
 
-    err: RopustError | None = None
+    err: Error[ErrorCode] | None = None
     try:
         raise_value_error()
     except ValueError as exc:
-        err = exception_to_ropust_error(exc)
+        err = exception_to_error(exc)
 
     assert err is not None
     data = err.to_dict()
-    parsed = RopustError.from_dict(data)
+    parsed = Error.from_dict(data)
 
     assert parsed.kind == err.kind
     assert parsed.code == err.code
@@ -125,14 +129,14 @@ def test_ropust_error_dict_roundtrip() -> None:
     assert "py_traceback" in parsed.metadata
 
 
-def test_ropust_error_from_dict_missing_fields() -> None:
+def test_error_from_dict_missing_fields() -> None:
     with pytest.raises(TypeError, match="missing 'kind' field"):
-        RopustError.from_dict({"code": "missing", "message": "oops"})
+        Error.from_dict({"code": "missing", "message": "oops"})
 
 
-def test_ropust_error_new_builds_fields() -> None:
-    err = RopustError.new(
-        code="user.age.not_number",
+def test_error_new_builds_fields() -> None:
+    err = new_error(
+        code=SampleCode.ERROR,
         message="age must be a number",
         kind=ErrorKind.InvalidInput,
         op="ParseAge",
@@ -142,7 +146,7 @@ def test_ropust_error_new_builds_fields() -> None:
         metadata={"source": "input"},
     )
 
-    assert err.code == "user.age.not_number"
+    assert err.code == SampleCode.ERROR
     assert err.message == "age must be a number"
     assert err.kind == ErrorKind.InvalidInput
     assert err.op == "ParseAge"
@@ -153,41 +157,41 @@ def test_ropust_error_new_builds_fields() -> None:
     assert err.cause is None
 
 
-def test_ropust_error_new_accepts_string_kind() -> None:
-    err = RopustError.new(code="missing", message="oops", kind="NotFound")
+def test_error_new_accepts_string_kind() -> None:
+    err = new_error(code=SampleCode.ERROR, message="oops", kind="NotFound")
     assert err.kind == ErrorKind.NotFound
 
 
-def test_ropust_error_wrap_with_ropust_error() -> None:
-    base = RopustError.new(code="user.age.not_number", message="age must be a number")
-    wrapped = RopustError.wrap(
+def test_error_wrap_with_error() -> None:
+    base = new_error(code=SampleCode.ERROR, message="age must be a number")
+    wrapped = wrap_error(
         base,
-        code="user.load.failed",
+        code=SampleCode.BOOM,
         message="failed to load user",
         metadata={"source": "payload"},
     )
 
-    assert wrapped.code == "user.load.failed"
+    assert wrapped.code == SampleCode.BOOM
     assert wrapped.message == "failed to load user"
     assert wrapped.cause is not None
-    assert "code='user.age.not_number'" in wrapped.cause
+    assert "code='error'" in wrapped.cause
     assert wrapped.metadata["source"] == "payload"
 
 
-def test_ropust_error_wrap_with_exception() -> None:
+def test_error_wrap_with_exception() -> None:
     def raise_value_error() -> None:
         raise ValueError("boom")
 
     with pytest.raises(ValueError, match="boom") as excinfo:
         raise_value_error()
 
-    wrapped = RopustError.wrap(
+    wrapped = wrap_error(
         excinfo.value,
-        code="json.decode.failed",
+        code=SampleCode.BOOM,
         message="invalid json payload",
     )
 
-    assert wrapped.code == "json.decode.failed"
+    assert wrapped.code == SampleCode.BOOM
     assert wrapped.message == "invalid json payload"
     assert wrapped.cause is not None
     assert "code='py_exception'" in wrapped.cause
@@ -195,14 +199,14 @@ def test_ropust_error_wrap_with_exception() -> None:
     assert "cause_py_traceback" in wrapped.metadata
 
 
-def test_ropust_error_wrap_rejects_none() -> None:
-    with pytest.raises(TypeError, match="wrap expects an exception or RopustError"):
-        RopustError.wrap(None, code="invalid", message="bad input")  # type: ignore[arg-type]
+def test_error_wrap_rejects_none() -> None:
+    with pytest.raises(TypeError, match="wrap expects an exception or Error"):
+        wrap_error(None, code=SampleCode.ERROR, message="bad input")  # type: ignore[arg-type]
 
 
 def test_result_context_wraps_error() -> None:
-    err = Err("boom")
-    wrapped = err.context("failed to process", metadata={"step": "parse"})
+    err_result = err(SampleCode.BOOM, "boom")
+    wrapped = err_result.context("failed to process", metadata={"step": "parse"})
     assert wrapped.is_err()
     wrapped_err = wrapped.unwrap_err()
     assert wrapped_err.code == "context"
@@ -213,24 +217,24 @@ def test_result_context_wraps_error() -> None:
 
 
 def test_result_context_ok_passthrough() -> None:
-    ok = Ok(123)
+    ok: Result[int, Error[ErrorCode]] = Ok(123)
     out = ok.context("ignored")
     assert out.is_ok()
     assert out.unwrap() == 123
 
 
 def test_result_with_code() -> None:
-    err = Err("boom")
-    coded = err.with_code("parse.error")
+    err_result = err(SampleCode.BOOM, "boom")
+    coded = err_result.with_code(SampleCode.PARSE_ERROR)
     assert coded.is_err()
     coded_err = coded.unwrap_err()
-    assert coded_err.code == "parse.error"
+    assert coded_err.code == SampleCode.PARSE_ERROR
     assert coded_err.message == "boom"
 
 
 def test_result_map_err_code_prefixes_once() -> None:
-    err = Err("boom")
-    prefixed = err.map_err_code("pipeline")
+    err_result = err(SampleCode.CUSTOM, "boom")
+    prefixed = err_result.map_err_code("pipeline")
     assert prefixed.unwrap_err().code == "pipeline.custom"
 
     prefixed_again = prefixed.map_err_code("pipeline")

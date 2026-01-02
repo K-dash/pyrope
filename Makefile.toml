@@ -55,7 +55,7 @@ dependencies = ["rust-fmt", "ruff-fmt"]
 
 [tasks.lint-all]
 description = "Lint both Rust and Python code"
-dependencies = ["rust-clippy", "ruff"]
+dependencies = ["rust-clippy", "ruff-fix"]
 
 # =============================================================================
 # Maturin / Build Tasks
@@ -157,6 +157,11 @@ args = ["run", "mypy", "--strict", "."]
 description = "Run ruff linter via uv"
 command = "uv"
 args = ["run", "ruff", "check", "."]
+
+[tasks.ruff-fix]
+description = "Lint and fix Python code with ruff"
+command = "uv"
+args = ["run", "ruff", "check", "--fix", "."]
 
 [tasks.ruff-fmt]
 description = "Format Python code with ruff"

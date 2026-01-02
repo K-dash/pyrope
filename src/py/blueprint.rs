@@ -1,4 +1,4 @@
-use super::error::{ErrorKind, RopustError};
+use super::error::{Error, ErrorKind};
 use super::operator::Operator;
 use super::result::{err, ok, ResultObj};
 use crate::interop::{py_to_value, serde_to_value, value_to_py, Value};
@@ -67,7 +67,7 @@ pub fn run(py: Python<'_>, blueprint: PyRef<'_, Blueprint>, input: Py<PyAny>) ->
                 .name()
                 .and_then(|name| name.to_str().map(|s| s.to_string()))
                 .unwrap_or_else(|_| "unknown".to_string());
-            return ropust_error(
+            return error_result(
                 py,
                 ErrorKind::InvalidInput,
                 "type_mismatch",
@@ -84,7 +84,7 @@ pub fn run(py: Python<'_>, blueprint: PyRef<'_, Blueprint>, input: Py<PyAny>) ->
         match parsed {
             Ok(value) => serde_to_value(value),
             Err(err) => {
-                return ropust_error(
+                return error_result(
                     py,
                     ErrorKind::InvalidInput,
                     "json_parse_error",
@@ -102,7 +102,7 @@ pub fn run(py: Python<'_>, blueprint: PyRef<'_, Blueprint>, input: Py<PyAny>) ->
         match py_to_value(input.bind(py)) {
             Ok(value) => value,
             Err(e) => {
-                return ropust_error(
+                return error_result(
                     py,
                     ErrorKind::InvalidInput,
                     e.code,
@@ -174,7 +174,7 @@ fn apply_map_py(py: Python<'_>, func: &Py<PyAny>, value: Value) -> Result<Value,
                 metadata.insert("py_traceback".to_string(), formatted.concat());
             }
         }
-        ropust_error(
+        error_result(
             py,
             ErrorKind::Internal,
             "py_exception",
@@ -194,7 +194,7 @@ fn apply_map_py(py: Python<'_>, func: &Py<PyAny>, value: Value) -> Result<Value,
 
     match py_to_value(result.bind(py)) {
         Ok(value) => Ok(value),
-        Err(err) => Err(ropust_error(
+        Err(err) => Err(error_result(
             py,
             ErrorKind::Internal,
             "py_return_invalid",
@@ -222,7 +222,7 @@ fn apply_get_or(
             }
             match py_to_value(default.bind(py)) {
                 Ok(value) => Ok(value),
-                Err(err) => Err(ropust_error(
+                Err(err) => Err(error_result(
                     py,
                     ErrorKind::InvalidInput,
                     "default_invalid",
@@ -244,7 +244,7 @@ fn apply_get_or(
 }
 
 fn op_error_to_result(py: Python<'_>, e: OpError) -> ResultObj {
-    ropust_error(
+    error_result(
         py,
         e.kind, // No conversion needed - same ErrorKind type
         e.code,
@@ -259,7 +259,7 @@ fn op_error_to_result(py: Python<'_>, e: OpError) -> ResultObj {
 }
 
 #[allow(clippy::too_many_arguments)]
-fn ropust_error(
+fn error_result(
     py: Python<'_>,
     kind: ErrorKind,
     code: &str,
@@ -273,7 +273,7 @@ fn ropust_error(
 ) -> ResultObj {
     let err_obj = Py::new(
         py,
-        RopustError {
+        Error {
             kind,
             code: code.to_string(),
             message: message.to_string(),
@@ -285,6 +285,6 @@ fn ropust_error(
             cause,
         },
     )
-    .expect("ropust error alloc");
-    err(py, err_obj.into())
+    .expect("error alloc");
+    err(err_obj.into())
 }
