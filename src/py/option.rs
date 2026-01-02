@@ -1,8 +1,9 @@
 use pyo3::exceptions::{PyRuntimeError, PyTypeError};
 use pyo3::prelude::*;
-use pyo3::types::PyTuple;
+use pyo3::types::{PyAny, PyDict, PyString, PyTuple};
+use std::collections::HashMap;
 
-use super::error::{build_error_from_parts, Error};
+use super::error::{build_error_from_parts, build_error_from_pyerr, Error};
 use super::result::{err, ok, ResultObj};
 
 #[pyclass(name = "Option")]
@@ -36,6 +37,79 @@ impl OptionObj {
             Ok(some(mapped.into()))
         } else {
             Ok(none_())
+        }
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    #[pyo3(signature = (f, *, code, message, kind = None, metadata = None, op = None, path = None, expected = None, got = None))]
+    fn map_try(
+        &self,
+        py: Python<'_>,
+        f: Bound<'_, PyAny>,
+        code: Py<PyAny>,
+        message: String,
+        kind: Option<Py<PyAny>>,
+        metadata: Option<Py<PyAny>>,
+        op: Option<String>,
+        path: Option<Py<PyAny>>,
+        expected: Option<String>,
+        got: Option<String>,
+    ) -> PyResult<ResultObj> {
+        if !self.is_some {
+            let option_obj = none_();
+            let py_option = Py::new(py, option_obj)?;
+            return Ok(ok(py_option.into()));
+        }
+
+        let value = self.value.as_ref().expect("some value");
+        match f.call1((value.clone_ref(py),)) {
+            Ok(mapped) => {
+                let option_obj = some(mapped.into());
+                let py_option = Py::new(py, option_obj)?;
+                Ok(ok(py_option.into()))
+            }
+            Err(py_err) => {
+                let cause_obj = build_error_from_pyerr(py, py_err, "py_exception");
+                let cause_ref = cause_obj.bind(py).extract::<PyRef<'_, Error>>()?;
+
+                let mut merged_metadata = extract_metadata(py, metadata)?;
+                if !merged_metadata.contains_key("cause_exception") {
+                    if let Some(value) = cause_ref.metadata.get("exception") {
+                        merged_metadata.insert("cause_exception".to_string(), value.to_string());
+                    }
+                }
+                if !merged_metadata.contains_key("cause_py_traceback") {
+                    if let Some(value) = cause_ref.metadata.get("py_traceback") {
+                        merged_metadata.insert("cause_py_traceback".to_string(), value.to_string());
+                    }
+                }
+
+                let metadata_value = if merged_metadata.is_empty() {
+                    None
+                } else {
+                    let dict = PyDict::new(py);
+                    for (k, v) in merged_metadata {
+                        dict.set_item(k, v)?;
+                    }
+                    Some(dict.into())
+                };
+
+                let kind = kind.or_else(|| Some(PyString::new(py, "Internal").into()));
+
+                let new_err = build_error_from_parts(
+                    py,
+                    code,
+                    &message,
+                    kind,
+                    metadata_value,
+                    op,
+                    path,
+                    expected,
+                    got,
+                    Some(error_repr(&cause_ref)),
+                )?;
+                Ok(err(Py::new(py, new_err)?.into()))
+            }
         }
     }
 
@@ -168,6 +242,87 @@ impl OptionObj {
         } else {
             Ok(none_())
         }
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    #[pyo3(signature = (f, *, code, message, kind = None, metadata = None, op = None, path = None, expected = None, got = None))]
+    fn and_then_try(
+        &self,
+        py: Python<'_>,
+        f: Bound<'_, PyAny>,
+        code: Py<PyAny>,
+        message: String,
+        kind: Option<Py<PyAny>>,
+        metadata: Option<Py<PyAny>>,
+        op: Option<String>,
+        path: Option<Py<PyAny>>,
+        expected: Option<String>,
+        got: Option<String>,
+    ) -> PyResult<ResultObj> {
+        if !self.is_some {
+            let option_obj = none_();
+            let py_option = Py::new(py, option_obj)?;
+            return Ok(ok(py_option.into()));
+        }
+
+        let value = self.value.as_ref().expect("some value");
+        let out = f.call1((value.clone_ref(py),));
+        let out = match out {
+            Ok(out) => out,
+            Err(py_err) => {
+                let cause_obj = build_error_from_pyerr(py, py_err, "py_exception");
+                let cause_ref = cause_obj.bind(py).extract::<PyRef<'_, Error>>()?;
+
+                let mut merged_metadata = extract_metadata(py, metadata)?;
+                if !merged_metadata.contains_key("cause_exception") {
+                    if let Some(value) = cause_ref.metadata.get("exception") {
+                        merged_metadata.insert("cause_exception".to_string(), value.to_string());
+                    }
+                }
+                if !merged_metadata.contains_key("cause_py_traceback") {
+                    if let Some(value) = cause_ref.metadata.get("py_traceback") {
+                        merged_metadata.insert("cause_py_traceback".to_string(), value.to_string());
+                    }
+                }
+
+                let metadata_value = if merged_metadata.is_empty() {
+                    None
+                } else {
+                    let dict = PyDict::new(py);
+                    for (k, v) in merged_metadata {
+                        dict.set_item(k, v)?;
+                    }
+                    Some(dict.into())
+                };
+
+                let kind = kind.or_else(|| Some(PyString::new(py, "Internal").into()));
+
+                let new_err = build_error_from_parts(
+                    py,
+                    code,
+                    &message,
+                    kind,
+                    metadata_value,
+                    op,
+                    path,
+                    expected,
+                    got,
+                    Some(error_repr(&cause_ref)),
+                )?;
+                return Ok(err(Py::new(py, new_err)?.into()));
+            }
+        };
+
+        let option_type = py.get_type::<OptionObj>();
+        if !out.is_instance(option_type.as_any())? {
+            return Err(PyTypeError::new_err(
+                "and_then_try callback must return Option",
+            ));
+        }
+        let out_ref: PyRef<'_, OptionObj> = out.extract()?;
+        let option_obj = clone_option(py, &out_ref);
+        let py_option = Py::new(py, option_obj)?;
+        Ok(ok(py_option.into()))
     }
 
     fn or_(&self, py: Python<'_>, other: &Self) -> Self {
@@ -372,4 +527,30 @@ fn clone_option(py: Python<'_>, out_ref: &PyRef<'_, OptionObj>) -> OptionObj {
         is_some: out_ref.is_some,
         value: out_ref.value.as_ref().map(|v| v.clone_ref(py)),
     }
+}
+
+fn error_repr(err: &Error) -> String {
+    format!(
+        "Error(kind=ErrorKind.{}, code='{}', message='{}')",
+        err.kind.as_str(),
+        err.code,
+        err.message
+    )
+}
+
+fn extract_metadata(
+    py: Python<'_>,
+    metadata: Option<Py<PyAny>>,
+) -> PyResult<HashMap<String, String>> {
+    let mut data = HashMap::new();
+    let Some(meta_value) = metadata else {
+        return Ok(data);
+    };
+    let meta_dict = meta_value.bind(py).cast_exact::<PyDict>()?;
+    for (k, v) in meta_dict.iter() {
+        let key = k.extract::<String>()?;
+        let value = v.extract::<String>()?;
+        data.insert(key, value);
+    }
+    Ok(data)
 }

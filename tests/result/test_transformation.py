@@ -11,7 +11,7 @@ intermediate functions to satisfy strict type checking.
 from __future__ import annotations
 
 from pyropust import Error, ErrorCode, Ok, Result
-from tests_support import err_msg, new_error
+from tests_support import SampleCode, err_msg, new_error
 
 
 class TestResultMap:
@@ -29,6 +29,76 @@ class TestResultMap:
 
     def test_map_skips_on_err(self) -> None:
         res: Result[int, Error[ErrorCode]] = err_msg("error").map(lambda x: x * 2)
+        assert res.is_err()
+        assert res.unwrap_err().message == "error"
+
+
+class TestResultMapTry:
+    """Test Result.map_try() for transforming Ok values with exception capture."""
+
+    def test_map_try_transforms_ok_value(self) -> None:
+        res: Result[int, Error[ErrorCode]] = Ok("123").map_try(
+            int,
+            code=SampleCode.ERROR,
+            message="invalid int",
+        )
+        assert res.is_ok()
+        assert res.unwrap() == 123
+
+    def test_map_try_wraps_exception(self) -> None:
+        res: Result[int, Error[ErrorCode]] = Ok("nope").map_try(
+            int,
+            code=SampleCode.BAD_INPUT,
+            message="invalid int",
+        )
+        assert res.is_err()
+        err = res.unwrap_err()
+        assert err.code == SampleCode.BAD_INPUT
+        assert err.message == "invalid int"
+        assert err.cause is not None
+        assert "py_exception" in err.cause
+
+    def test_map_try_skips_on_err(self) -> None:
+        res: Result[int, Error[ErrorCode]] = err_msg("error").map_try(
+            int,
+            code=SampleCode.ERROR,
+            message="invalid int",
+        )
+        assert res.is_err()
+        assert res.unwrap_err().message == "error"
+
+
+class TestResultAndThenTry:
+    """Test Result.and_then_try() for chaining with exception capture."""
+
+    def test_and_then_try_transforms_ok_value(self) -> None:
+        res: Result[str, Error[ErrorCode]] = Ok("123").and_then_try(
+            lambda x: Ok(f"Value is {int(x) * 2}"),
+            code=SampleCode.ERROR,
+            message="invalid int",
+        )
+        assert res.is_ok()
+        assert res.unwrap() == "Value is 246"
+
+    def test_and_then_try_wraps_exception(self) -> None:
+        res: Result[str, Error[ErrorCode]] = Ok("nope").and_then_try(
+            lambda x: Ok(f"Value is {int(x) * 2}"),
+            code=SampleCode.BAD_INPUT,
+            message="invalid int",
+        )
+        assert res.is_err()
+        err = res.unwrap_err()
+        assert err.code == SampleCode.BAD_INPUT
+        assert err.message == "invalid int"
+        assert err.cause is not None
+        assert "py_exception" in err.cause
+
+    def test_and_then_try_skips_on_err(self) -> None:
+        res: Result[str, Error[ErrorCode]] = err_msg("error").and_then_try(
+            lambda x: Ok(f"Value is {x}"),
+            code=SampleCode.ERROR,
+            message="invalid int",
+        )
         assert res.is_err()
         assert res.unwrap_err().message == "error"
 
