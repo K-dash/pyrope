@@ -19,7 +19,7 @@ from pyropust import (
     err,
     exception_to_error,
 )
-from tests_support import SampleCode, new_error, wrap_error
+from tests.support import SampleCode, new_error, wrap_error
 
 
 def test_result_ok_err() -> None:

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pyropust import None_, Option, Some
-from tests_support import SampleCode
+from tests.support import SampleCode
 
 
 class TestOptionMap:
