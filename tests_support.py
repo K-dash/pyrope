@@ -31,9 +31,9 @@ def err_msg(
     return err(code, message)
 
 
-def new_error(
+def new_error[CodeT: ErrorCode](
     *,
-    code: ErrorCode,
+    code: CodeT,
     message: str,
     kind: ErrorKind | str | None = None,
     op: str | None = None,
@@ -41,8 +41,8 @@ def new_error(
     expected: str | None = None,
     got: str | None = None,
     metadata: Mapping[str, str] | None = None,
-) -> Error[ErrorCode]:
-    return Error[ErrorCode].new(
+) -> Error[CodeT]:
+    return Error[CodeT].new(
         code=code,
         message=message,
         kind=kind,
@@ -54,10 +54,10 @@ def new_error(
     )
 
 
-def wrap_error(
-    err_value: BaseException | Error[ErrorCode],
+def wrap_error[CodeT: ErrorCode](
+    err_value: BaseException | Error[CodeT],
     *,
-    code: ErrorCode,
+    code: CodeT,
     message: str,
     kind: ErrorKind | str | None = None,
     op: str | None = None,
@@ -65,8 +65,8 @@ def wrap_error(
     expected: str | None = None,
     got: str | None = None,
     metadata: Mapping[str, str] | None = None,
-) -> Error[ErrorCode]:
-    return Error[ErrorCode].wrap(
+) -> Error[CodeT]:
+    return Error[CodeT].wrap(
         err_value,
         code=code,
         message=message,

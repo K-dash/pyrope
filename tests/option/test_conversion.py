@@ -7,9 +7,7 @@ Use function return types or intermediate functions to satisfy strict type check
 
 from __future__ import annotations
 
-from typing import cast
-
-from pyropust import ErrorCode, None_, Option, Some
+from pyropust import None_, Option, Some
 from tests_support import SampleCode, wrap_error
 
 
@@ -113,7 +111,7 @@ class TestOptionOkOrElse:
 
         opt = none_val()
         result = opt.ok_or_else(
-            cast("ErrorCode", SampleCode.ERROR),
+            SampleCode.ERROR,
             lambda: wrap_error(
                 ValueError("dynamically created error"),
                 code=SampleCode.ERROR,
