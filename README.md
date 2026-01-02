@@ -120,19 +120,22 @@ Unlike `Optional[T]` (which is only a type hint), `Option[T]` is a runtime value
 Avoid `if` checks by chaining operations.
 
 ```python
-from pyropust import Error, ErrorCode, Ok, Result, err
+from pyropust import ErrorCode, Ok
 
 class Code(ErrorCode):
     INVALID = "invalid"
 
 res = (
     Ok("123")
-    .map(int)                # Result[int, Error[Code]]
+    .map_try(int, code=Code.INVALID, message="invalid int")  # Result[int, Error[Code]]
     .map(lambda x: x * 2)    # Result[int, Error[Code]]
     .and_then(lambda x: Ok(f"Value is {x}"))
 )
 print(res.unwrap())  # "Value is 246"
 ```
+
+- Use `map` for pure transforms and `map_try` / `and_then_try` when the function can raise (same rule for `Option`).
+- These two `*_try` methods are the official exception boundaries for chaining; other callbacks do not catch exceptions.
 
 When to use: `map/and_then` is best for small, expression-style transforms where each step is a function.
 

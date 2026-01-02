@@ -1,6 +1,6 @@
 use pyo3::exceptions::{PyBaseException, PyRuntimeError, PyTypeError};
 use pyo3::prelude::*;
-use pyo3::types::{PyAny, PyDict, PyList, PyTuple, PyType};
+use pyo3::types::{PyAny, PyDict, PyList, PyString, PyTuple, PyType};
 use pyo3::Bound;
 use std::collections::HashMap;
 
@@ -97,6 +97,73 @@ impl ResultObj {
             Ok(ok(mapped.into()))
         } else {
             Ok(err(self.err.as_ref().expect("err value").clone_ref(py)))
+        }
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    #[pyo3(signature = (f, *, code, message, kind = None, metadata = None, op = None, path = None, expected = None, got = None))]
+    fn map_try(
+        &self,
+        py: Python<'_>,
+        f: Bound<'_, PyAny>,
+        code: Py<PyAny>,
+        message: String,
+        kind: Option<Py<PyAny>>,
+        metadata: Option<Py<PyAny>>,
+        op: Option<String>,
+        path: Option<Py<PyAny>>,
+        expected: Option<String>,
+        got: Option<String>,
+    ) -> PyResult<Self> {
+        if !self.is_ok {
+            return Ok(err(self.err.as_ref().expect("err value").clone_ref(py)));
+        }
+
+        let value = self.ok.as_ref().expect("ok value");
+        match f.call1((value.clone_ref(py),)) {
+            Ok(mapped) => Ok(ok(mapped.into())),
+            Err(py_err) => {
+                let cause_obj = build_error_from_pyerr(py, py_err, "py_exception");
+                let cause_ref = cause_obj.bind(py).extract::<PyRef<'_, Error>>()?;
+
+                let mut merged_metadata = extract_metadata(py, metadata)?;
+                if !merged_metadata.contains_key("cause_exception") {
+                    if let Some(value) = cause_ref.metadata.get("exception") {
+                        merged_metadata.insert("cause_exception".to_string(), value.to_string());
+                    }
+                }
+                if !merged_metadata.contains_key("cause_py_traceback") {
+                    if let Some(value) = cause_ref.metadata.get("py_traceback") {
+                        merged_metadata.insert("cause_py_traceback".to_string(), value.to_string());
+                    }
+                }
+
+                let metadata_value = if merged_metadata.is_empty() {
+                    None
+                } else {
+                    let dict = PyDict::new(py);
+                    for (k, v) in merged_metadata {
+                        dict.set_item(k, v)?;
+                    }
+                    Some(dict.into())
+                };
+
+                let kind = kind.or_else(|| Some(PyString::new(py, "Internal").into()));
+
+                let new_err = build_error_from_parts(
+                    py,
+                    code,
+                    &message,
+                    kind,
+                    metadata_value,
+                    op,
+                    path,
+                    expected,
+                    got,
+                    Some(error_repr(&cause_ref)),
+                )?;
+                Ok(err(Py::new(py, new_err)?.into()))
+            }
         }
     }
 
@@ -230,6 +297,83 @@ impl ResultObj {
         } else {
             Ok(err(self.err.as_ref().expect("err value").clone_ref(py)))
         }
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    #[pyo3(signature = (f, *, code, message, kind = None, metadata = None, op = None, path = None, expected = None, got = None))]
+    fn and_then_try(
+        &self,
+        py: Python<'_>,
+        f: Bound<'_, PyAny>,
+        code: Py<PyAny>,
+        message: String,
+        kind: Option<Py<PyAny>>,
+        metadata: Option<Py<PyAny>>,
+        op: Option<String>,
+        path: Option<Py<PyAny>>,
+        expected: Option<String>,
+        got: Option<String>,
+    ) -> PyResult<Self> {
+        if !self.is_ok {
+            return Ok(err(self.err.as_ref().expect("err value").clone_ref(py)));
+        }
+
+        let value = self.ok.as_ref().expect("ok value");
+        let out = f.call1((value.clone_ref(py),));
+        let out = match out {
+            Ok(out) => out,
+            Err(py_err) => {
+                let cause_obj = build_error_from_pyerr(py, py_err, "py_exception");
+                let cause_ref = cause_obj.bind(py).extract::<PyRef<'_, Error>>()?;
+
+                let mut merged_metadata = extract_metadata(py, metadata)?;
+                if !merged_metadata.contains_key("cause_exception") {
+                    if let Some(value) = cause_ref.metadata.get("exception") {
+                        merged_metadata.insert("cause_exception".to_string(), value.to_string());
+                    }
+                }
+                if !merged_metadata.contains_key("cause_py_traceback") {
+                    if let Some(value) = cause_ref.metadata.get("py_traceback") {
+                        merged_metadata.insert("cause_py_traceback".to_string(), value.to_string());
+                    }
+                }
+
+                let metadata_value = if merged_metadata.is_empty() {
+                    None
+                } else {
+                    let dict = PyDict::new(py);
+                    for (k, v) in merged_metadata {
+                        dict.set_item(k, v)?;
+                    }
+                    Some(dict.into())
+                };
+
+                let kind = kind.or_else(|| Some(PyString::new(py, "Internal").into()));
+
+                let new_err = build_error_from_parts(
+                    py,
+                    code,
+                    &message,
+                    kind,
+                    metadata_value,
+                    op,
+                    path,
+                    expected,
+                    got,
+                    Some(error_repr(&cause_ref)),
+                )?;
+                return Ok(err(Py::new(py, new_err)?.into()));
+            }
+        };
+
+        let result_type = py.get_type::<ResultObj>();
+        if !out.is_instance(result_type.as_any())? {
+            return Err(PyTypeError::new_err(
+                "and_then_try callback must return Result",
+            ));
+        }
+        let out_ref: PyRef<'_, ResultObj> = out.extract()?;
+        Ok(clone_result(py, &out_ref))
     }
 
     fn is_ok_and(&self, py: Python<'_>, f: Bound<'_, PyAny>) -> PyResult<bool> {

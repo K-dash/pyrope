@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pyropust import None_, Option, Some
+from tests_support import SampleCode
 
 
 class TestOptionMap:
@@ -15,6 +16,32 @@ class TestOptionMap:
 
     def test_map_skips_on_none(self) -> None:
         opt: Option[int] = None_().map(lambda x: x * 2)
+        assert opt.is_none()
+
+
+class TestOptionMapTry:
+    """Test Option.map_try() for transforming Some values with exception capture."""
+
+    def test_map_try_transforms_some_value(self) -> None:
+        res = Some("123").map_try(int, code=SampleCode.ERROR, message="invalid int")
+        assert res.is_ok()
+        opt = res.unwrap()
+        assert opt.is_some()
+        assert opt.unwrap() == 123
+
+    def test_map_try_wraps_exception(self) -> None:
+        res = Some("nope").map_try(int, code=SampleCode.BAD_INPUT, message="invalid int")
+        assert res.is_err()
+        err = res.unwrap_err()
+        assert err.code == SampleCode.BAD_INPUT
+        assert err.message == "invalid int"
+        assert err.cause is not None
+        assert "py_exception" in err.cause
+
+    def test_map_try_skips_on_none(self) -> None:
+        res = None_().map_try(int, code=SampleCode.ERROR, message="invalid int")
+        assert res.is_ok()
+        opt = res.unwrap()
         assert opt.is_none()
 
 
@@ -83,3 +110,41 @@ class TestOptionFilter:
         opt: Option[int] = None_()
         result = opt.filter(lambda x: x > 5)
         assert result.is_none()
+
+
+class TestOptionAndThenTry:
+    """Test Option.and_then_try() for chaining with exception capture."""
+
+    def test_and_then_try_transforms_some_value(self) -> None:
+        res = Some("123").and_then_try(
+            lambda x: Some(int(x) * 2),
+            code=SampleCode.ERROR,
+            message="invalid int",
+        )
+        assert res.is_ok()
+        opt = res.unwrap()
+        assert opt.is_some()
+        assert opt.unwrap() == 246
+
+    def test_and_then_try_wraps_exception(self) -> None:
+        res = Some("nope").and_then_try(
+            lambda x: Some(int(x) * 2),
+            code=SampleCode.BAD_INPUT,
+            message="invalid int",
+        )
+        assert res.is_err()
+        err = res.unwrap_err()
+        assert err.code == SampleCode.BAD_INPUT
+        assert err.message == "invalid int"
+        assert err.cause is not None
+        assert "py_exception" in err.cause
+
+    def test_and_then_try_skips_on_none(self) -> None:
+        res = None_().and_then_try(
+            lambda x: Some(x),
+            code=SampleCode.ERROR,
+            message="invalid int",
+        )
+        assert res.is_ok()
+        opt = res.unwrap()
+        assert opt.is_none()
