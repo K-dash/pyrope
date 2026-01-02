@@ -8,7 +8,7 @@ Use function return types or intermediate functions to satisfy strict type check
 from __future__ import annotations
 
 from pyropust import None_, Option, Some
-from tests_support import SampleCode, wrap_error
+from tests.support import SampleCode, wrap_error
 
 
 class TestOptionOkOr:

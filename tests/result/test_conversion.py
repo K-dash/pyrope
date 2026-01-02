@@ -9,7 +9,7 @@ intermediate functions to satisfy strict type checking.
 from __future__ import annotations
 
 from pyropust import Err, Error, ErrorCode, Ok, Result
-from tests_support import SampleCode, err_msg, wrap_error
+from tests.support import SampleCode, err_msg, wrap_error
 
 
 class TestResultOk:

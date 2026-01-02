@@ -10,7 +10,7 @@ from __future__ import annotations
 import pytest
 
 from pyropust import Error, ErrorCode, None_, Ok, Option, Result, Some
-from tests_support import err_msg
+from tests.support import err_msg
 
 
 class TestOptionFlatten:
