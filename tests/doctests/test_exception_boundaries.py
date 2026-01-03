@@ -1,7 +1,4 @@
-"""Doctests for exception boundary examples.
-
-Tests @catch, *_try methods, and Result.attempt from concepts/exceptions.md
-"""
+from __future__ import annotations
 
 from typing import TypedDict
 

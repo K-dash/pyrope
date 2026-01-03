@@ -1,7 +1,4 @@
-"""Doctests for Option basic operations.
-
-Tests examples from reference/option.md.
-"""
+from __future__ import annotations
 
 from typing import TypedDict
 

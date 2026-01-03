@@ -1,7 +1,4 @@
-"""Doctests for helper functions (err, bail, ensure).
-
-Tests examples from reference/helpers.md.
-"""
+from __future__ import annotations
 
 from typing import TypedDict
 

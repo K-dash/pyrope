@@ -1,7 +1,4 @@
-"""Doctests for getting-started.md examples.
-
-Tests basic Result usage patterns from the Getting Started guide.
-"""
+from __future__ import annotations
 
 from pyropust import ErrorCode, Ok, Result, err
 
